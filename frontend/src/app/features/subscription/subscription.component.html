@@ -1,0 +1,203 @@
+<p-toast position="top-right" />
+
+<div class="subscription-page">
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">
+        <span class="material-symbols-outlined">workspace_premium</span>
+        Langganan
+      </h1>
+      <p class="page-subtitle">Kelola paket dan pemakaian kuota Anda</p>
+    </div>
+  </div>
+
+  <!-- Current Plan Card -->
+  @if (!loading() && subscription()) {
+    <div class="current-plan-card card">
+      <div class="current-plan-header">
+        <div class="plan-icon-wrap" [style.background]="'rgba(18,140,126,0.1)'">
+          <span class="material-symbols-outlined filled" style="color:#128C7E">workspace_premium</span>
+        </div>
+        <div class="plan-info">
+          <div class="plan-label">Paket Aktif</div>
+          <div class="plan-name">{{ subscription().plan | titlecase }}</div>
+        </div>
+        <div class="plan-renewal">
+          <span class="material-symbols-outlined icon-sm">calendar_today</span>
+          Perpanjangan: {{ formatDate(subscription().renewed_at) }}
+        </div>
+        <span
+          class="status-badge"
+          [class.status-completed]="subscription().status === 'active'"
+          [class.status-cancelled]="subscription().status !== 'active'"
+        >
+          <span class="status-dot"></span>
+          {{ subscription().status === 'active' ? 'Aktif' : 'Nonaktif' }}
+        </span>
+      </div>
+
+      <!-- Usage Bar -->
+      <div class="usage-section">
+        <div class="usage-header">
+          <div>
+            <div class="usage-title">
+              <span class="material-symbols-outlined icon-sm">chat_bubble</span>
+              Kuota Percakapan Bulan Ini
+            </div>
+            <div class="usage-numbers">
+              <strong>{{ subscription().quota_used ?? 0 }}</strong>
+              <span> / {{ subscription().quota_conversation ?? 0 }} percakapan</span>
+            </div>
+          </div>
+          <div class="usage-percent" [style.color]="usageColor()">
+            {{ usagePercent() }}%
+          </div>
+        </div>
+
+        <div class="progress-track">
+          <div
+            class="progress-fill"
+            [style.width.%]="usagePercent()"
+            [style.background]="usageColor()"
+          ></div>
+        </div>
+
+        @if (usagePercent() >= 90) {
+          <div class="usage-alert danger">
+            <span class="material-symbols-outlined">error</span>
+            Kuota hampir habis! Upgrade paket untuk menghindari gangguan layanan.
+          </div>
+        } @else if (usagePercent() >= 70) {
+          <div class="usage-alert warning">
+            <span class="material-symbols-outlined">warning</span>
+            Kuota sudah terpakai {{ usagePercent() }}%. Pertimbangkan upgrade paket.
+          </div>
+        }
+      </div>
+    </div>
+  } @else if (loading()) {
+    <div class="card" style="padding:24px;height:180px;display:flex;align-items:center;justify-content:center">
+      <span class="material-symbols-outlined spinning" style="font-size:36px;color:var(--color-primary)">progress_activity</span>
+    </div>
+  }
+
+  <!-- Plan Comparison -->
+  <div class="section-title-row">
+    <h2 class="section-heading">Pilih Paket</h2>
+    <p class="section-desc">Semua paket sudah termasuk bot WhatsApp, QRIS, dan ongkir otomatis</p>
+  </div>
+
+  <div class="plans-grid">
+    @for (plan of plans; track plan.key) {
+      <div
+        class="plan-card card"
+        [class.current]="isCurrentPlan(plan.key)"
+        [class.popular]="plan.popular"
+      >
+        @if (plan.popular && !isCurrentPlan(plan.key)) {
+          <div class="popular-badge">
+            <span class="material-symbols-outlined icon-sm">star</span>
+            Paling Populer
+          </div>
+        }
+        @if (isCurrentPlan(plan.key)) {
+          <div class="current-badge">
+            <span class="material-symbols-outlined icon-sm">check_circle</span>
+            Paket Aktif
+          </div>
+        }
+
+        <div class="plan-header">
+          <div class="plan-icon" [style.background]="plan.color + '18'" [style.color]="plan.color">
+            <span class="material-symbols-outlined filled">{{ plan.icon }}</span>
+          </div>
+          <div class="plan-name-lg" [style.color]="plan.color">{{ plan.name }}</div>
+        </div>
+
+        <div class="plan-price">
+          <span class="price-value">{{ plan.price | rupiah }}</span>
+          <span class="price-period">/bulan</span>
+        </div>
+
+        <div class="plan-specs">
+          <div class="spec-item">
+            <span class="material-symbols-outlined icon-sm" style="color:#128C7E">chat_bubble</span>
+            ~{{ plan.quota | number }} percakapan
+          </div>
+          <div class="spec-item">
+            <span class="material-symbols-outlined icon-sm" style="color:#128C7E">inventory_2</span>
+            {{ plan.maxProducts }}
+          </div>
+        </div>
+
+        <ul class="feature-list">
+          @for (feat of plan.features; track feat) {
+            <li>
+              <span class="material-symbols-outlined icon-sm" style="color:#22c55e">check_circle</span>
+              {{ feat }}
+            </li>
+          }
+        </ul>
+
+        <div class="plan-action">
+          @if (isCurrentPlan(plan.key)) {
+            <button class="btn btn-outline w-full" disabled>
+              <span class="material-symbols-outlined">check</span>
+              Paket Saat Ini
+            </button>
+          } @else if (isLowerPlan(plan.key)) {
+            <button class="btn btn-ghost w-full" disabled>
+              Paket Lebih Rendah
+            </button>
+          } @else if (plan.key === 'pro') {
+            <a
+              href="https://wa.me/6281234567890?text=Halo,%20saya%20ingin%20upgrade%20ke%20paket%20Pro%20WaKasir"
+              target="_blank"
+              class="btn w-full"
+              [style.background]="plan.color"
+              style="color:#fff;text-decoration:none;justify-content:center"
+            >
+              <span class="material-symbols-outlined">support_agent</span>
+              Hubungi Kami
+            </a>
+          } @else {
+            <button
+              class="btn w-full"
+              [style.background]="plan.color"
+              style="color:#fff"
+              [disabled]="upgrading()"
+              (click)="upgrade(plan.key)"
+            >
+              @if (upgrading()) {
+                <span class="material-symbols-outlined spinning">progress_activity</span>
+                Memproses...
+              } @else {
+                <span class="material-symbols-outlined">upgrade</span>
+                Upgrade ke {{ plan.name }}
+              }
+            </button>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Billing History placeholder -->
+  <div class="card billing-section">
+    <div class="billing-header">
+      <div>
+        <h3 class="section-heading" style="font-size:1rem">
+          <span class="material-symbols-outlined icon-sm" style="color:#128C7E">receipt</span>
+          Riwayat Tagihan
+        </h3>
+      </div>
+    </div>
+    <div class="billing-empty">
+      <span class="material-symbols-outlined" style="font-size:40px;color:#d1d5db">receipt_long</span>
+      <p>Riwayat tagihan akan tersedia segera.</p>
+      <span>Untuk pertanyaan tagihan, hubungi tim kami.</span>
+    </div>
+  </div>
+
+</div>

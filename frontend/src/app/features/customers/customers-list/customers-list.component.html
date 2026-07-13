@@ -1,0 +1,161 @@
+<div class="customers-page page-enter">
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">
+        <span class="material-symbols-outlined">people</span>
+        Pelanggan
+      </h1>
+      <p class="page-subtitle">Riwayat dan data semua pembeli Anda</p>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  @if (!loading()) {
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#e6f4f2;color:#128C7E">
+          <span class="material-symbols-outlined">people</span>
+        </div>
+        <div class="stat-body">
+          <div class="stat-val">{{ stats().total }}</div>
+          <div class="stat-lbl">Total Pelanggan</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#dcfce7;color:#166534">
+          <span class="material-symbols-outlined">trending_up</span>
+        </div>
+        <div class="stat-body">
+          <div class="stat-val">{{ stats().activeThisMonth }}</div>
+          <div class="stat-lbl">Aktif Bulan Ini</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#fef3c7;color:#92400e">
+          <span class="material-symbols-outlined">repeat</span>
+        </div>
+        <div class="stat-body">
+          <div class="stat-val">{{ stats().repeatBuyers }}</div>
+          <div class="stat-lbl">Repeat Buyer</div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Table -->
+  <div class="data-table-wrap">
+    <div class="table-header">
+      <div class="search-wrap">
+        <span class="material-symbols-outlined search-icon">search</span>
+        <input
+          type="text"
+          class="search-input"
+          placeholder="Cari nama atau nomor WA..."
+          [value]="search()"
+          (input)="search.set($any($event.target).value)"
+        />
+      </div>
+    </div>
+
+    @if (loading()) {
+      <div class="skeleton-rows">
+        @for (i of [1,2,3,4,5]; track i) {
+          <div class="skeleton-row">
+            <p-skeleton height="16px" width="140px" />
+            <p-skeleton height="16px" width="120px" />
+            <p-skeleton height="16px" width="60px" />
+            <p-skeleton height="16px" width="100px" />
+            <p-skeleton height="16px" width="90px" />
+          </div>
+        }
+      </div>
+    } @else if (filtered().length === 0) {
+      <div class="empty-state-full">
+        <span class="material-symbols-outlined" style="font-size:56px;color:#d1d5db">people</span>
+        <h3>Belum ada pelanggan</h3>
+        <p>Pelanggan akan muncul setelah order pertama masuk</p>
+      </div>
+    } @else {
+      <p-table
+        [value]="filtered()"
+        [paginator]="filtered().length > 15"
+        [rows]="15"
+      >
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Nomor WA</th>
+            <th pSortableColumn="name">Nama</th>
+            <th pSortableColumn="total_orders">Total Order</th>
+            <th pSortableColumn="total_spent">Total Belanja</th>
+            <th pSortableColumn="last_order_at">Terakhir Transaksi</th>
+            <th style="width:80px">Aksi</th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-c>
+          <tr class="customer-row" (click)="openCustomer(c)" style="cursor:pointer">
+            <td>
+              <div class="wa-cell">
+                <a [href]="waLink(c.wa_number)" target="_blank" class="wa-icon" (click)="$event.stopPropagation()" title="Chat di WhatsApp">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                </a>
+                <span>{{ c.wa_number }}</span>
+              </div>
+            </td>
+            <td>{{ c.name ?? '-' }}</td>
+            <td><span class="order-count-badge">{{ c.total_orders }}</span></td>
+            <td class="font-semibold">{{ c.total_spent | rupiah }}</td>
+            <td>{{ c.last_order_at | date:'dd MMM yyyy' }}</td>
+            <td (click)="$event.stopPropagation()">
+              <button class="icon-btn edit" title="Lihat riwayat" (click)="openCustomer(c)">
+                <span class="material-symbols-outlined">visibility</span>
+              </button>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    }
+  </div>
+</div>
+
+<!-- Customer detail dialog -->
+<p-dialog
+  [visible]="showModal()"
+  (visibleChange)="showModal.set($event)"
+  [header]="'Riwayat: ' + (selected()?.name ?? selected()?.wa_number ?? '')"
+  [modal]="true"
+  [style]="{ width: '640px' }"
+  [draggable]="false"
+>
+  @if (selected()) {
+    <div class="customer-detail">
+      <div class="cust-meta">
+        <div class="cust-avatar">{{ (selected()!.name ?? selected()!.wa_number)[0].toUpperCase() }}</div>
+        <div>
+          <div class="cust-name">{{ selected()!.name ?? 'Pelanggan' }}</div>
+          <a [href]="waLink(selected()!.wa_number)" target="_blank" class="wa-link-detail">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            {{ selected()!.wa_number }}
+          </a>
+        </div>
+        <div class="cust-stats">
+          <div class="cs-item"><span class="cs-val">{{ selected()!.total_orders }}</span><span class="cs-lbl">Order</span></div>
+          <div class="cs-item"><span class="cs-val">{{ selected()!.total_spent | rupiah:true }}</span><span class="cs-lbl">Total Belanja</span></div>
+        </div>
+      </div>
+
+      <h4 class="history-title">Riwayat Pesanan</h4>
+      @for (order of selected()!.orders; track order.id) {
+        <div class="history-row">
+          <div class="history-main">
+            <span class="history-num">#{{ order.order_number }}</span>
+            <span class="history-date">{{ order.created_at | date:'dd MMM yyyy' }}</span>
+          </div>
+          <span class="history-total">{{ order.total_amount | rupiah }}</span>
+          <span [class]="getStatusClass(order.status)" style="font-size:0.7rem"><span class="status-dot"></span>{{ order.status }}</span>
+        </div>
+      }
+    </div>
+  }
+</p-dialog>

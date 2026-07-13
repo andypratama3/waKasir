@@ -1,0 +1,310 @@
+<p-toast position="top-right" />
+<p-confirmDialog />
+
+<div class="products-page page-enter">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">
+        <span class="material-symbols-outlined">inventory_2</span>
+        Produk
+      </h1>
+      <p class="page-subtitle">Kelola katalog produk toko Anda</p>
+    </div>
+    <button class="btn btn-primary" (click)="openAdd()">
+      <span class="material-symbols-outlined">add</span>
+      Tambah Produk
+    </button>
+  </div>
+
+  <!-- Table card -->
+  <div class="data-table-wrap">
+    <!-- Search bar -->
+    <div class="table-header">
+      <div class="search-wrap">
+        <span class="material-symbols-outlined search-icon">search</span>
+        <input
+          type="text"
+          class="search-input"
+          placeholder="Cari nama atau kategori produk..."
+          [value]="searchQuery()"
+          (input)="onSearch($any($event.target).value)"
+        />
+      </div>
+      <div class="table-stats">
+        <span class="stat-chip">
+          <span class="material-symbols-outlined icon-sm">inventory_2</span>
+          {{ filtered().length }} produk
+        </span>
+      </div>
+    </div>
+
+    <!-- Loading skeleton -->
+    @if (loading()) {
+      <div class="skeleton-rows">
+        @for (i of [1,2,3,4,5]; track i) {
+          <div class="skeleton-row">
+            <p-skeleton width="48px" height="48px" borderRadius="10px" />
+            <div class="skeleton-text">
+              <p-skeleton height="14px" width="200px" />
+              <p-skeleton height="12px" width="120px" />
+            </div>
+            <p-skeleton height="14px" width="80px" />
+            <p-skeleton height="14px" width="60px" />
+            <p-skeleton height="14px" width="70px" />
+            <p-skeleton height="28px" width="60px" borderRadius="20px" />
+            <p-skeleton height="32px" width="80px" borderRadius="8px" />
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Empty state -->
+    @else if (filtered().length === 0) {
+      <div class="empty-state-full">
+        <span class="material-symbols-outlined" style="font-size:56px;color:#d1d5db">inventory_2</span>
+        <h3>Belum ada produk</h3>
+        <p>Mulai tambahkan produk untuk ditampilkan di katalog bot</p>
+        <button class="btn btn-primary" (click)="openAdd()">
+          <span class="material-symbols-outlined">add</span>
+          Tambah Produk Pertama
+        </button>
+      </div>
+    }
+
+    <!-- Product table -->
+    @else {
+      <p-table
+        [value]="filtered()"
+        [paginator]="filtered().length > 10"
+        [rows]="10"
+        [rowsPerPageOptions]="[10, 25, 50]"
+        styleClass="products-table"
+      >
+        <ng-template pTemplate="header">
+          <tr>
+            <th style="width:64px">Foto</th>
+            <th pSortableColumn="name">Nama</th>
+            <th pSortableColumn="price">Harga</th>
+            <th pSortableColumn="stock">Stok</th>
+            <th>Berat</th>
+            <th>Kategori</th>
+            <th>Status</th>
+            <th style="width:100px">Aksi</th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-product>
+          <tr>
+            <!-- Image -->
+            <td>
+              <div class="product-thumb">
+                @if (product.image_url) {
+                  <img [src]="product.image_url" [alt]="product.name" />
+                } @else {
+                  <span class="material-symbols-outlined" style="color:#d1d5db;font-size:28px">image</span>
+                }
+              </div>
+            </td>
+
+            <!-- Name -->
+            <td>
+              <div class="product-name-cell">
+                <span class="product-name-text">{{ product.name }}</span>
+                @if (product.variants?.length > 0) {
+                  <span class="variant-chip">{{ product.variants.length }} varian</span>
+                }
+              </div>
+            </td>
+
+            <!-- Price -->
+            <td class="font-semibold">{{ product.price | rupiah }}</td>
+
+            <!-- Stock -->
+            <td>
+              <span class="stock-val" [class.low]="product.stock <= 5">
+                @if (product.stock <= 5 && product.stock > 0) {
+                  <span class="material-symbols-outlined icon-sm" style="color:#f59e0b">warning</span>
+                }
+                @if (product.stock === 0) {
+                  <span class="material-symbols-outlined icon-sm" style="color:#ef4444">error</span>
+                }
+                {{ product.stock }}
+              </span>
+            </td>
+
+            <!-- Weight -->
+            <td>{{ product.weight_gram }}gr</td>
+
+            <!-- Category -->
+            <td>
+              @if (product.category) {
+                <span class="category-chip">{{ product.category }}</span>
+              } @else {
+                <span class="text-muted">-</span>
+              }
+            </td>
+
+            <!-- Status toggle -->
+            <td>
+              <div class="status-toggle" (click)="toggleActive(product)">
+                <div class="toggle-track" [class.on]="product.is_active">
+                  <div class="toggle-thumb"></div>
+                </div>
+                <span class="toggle-label">{{ product.is_active ? 'Aktif' : 'Nonaktif' }}</span>
+              </div>
+            </td>
+
+            <!-- Actions -->
+            <td>
+              <div class="action-btns">
+                <button class="icon-btn edit" pTooltip="Edit" tooltipPosition="top" (click)="openEdit(product)">
+                  <span class="material-symbols-outlined">edit</span>
+                </button>
+                <button class="icon-btn delete" pTooltip="Hapus" tooltipPosition="top" (click)="confirmDelete(product)">
+                  <span class="material-symbols-outlined">delete_forever</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    }
+  </div>
+</div>
+
+<!-- ── Product Form Dialog ── -->
+<p-dialog
+  [visible]="showDialog()"
+  (visibleChange)="showDialog.set($event)"
+  [header]="editMode() ? 'Edit Produk' : 'Tambah Produk'"
+  [modal]="true"
+  [style]="{ width: '640px' }"
+  [breakpoints]="{ '768px': '95vw' }"
+  [draggable]="false"
+  [resizable]="false"
+>
+  <form [formGroup]="form" (ngSubmit)="saveProduct()">
+    <div class="dialog-body">
+
+      <!-- Image upload -->
+      <div class="image-upload-area">
+        <label for="img-upload" class="image-upload-label">
+          @if (imagePreview()) {
+            <img [src]="imagePreview()!" alt="Preview" class="image-preview" />
+          } @else {
+            <span class="material-symbols-outlined" style="font-size:40px;color:#d1d5db">add_photo_alternate</span>
+            <span style="font-size:0.8125rem;color:var(--color-text-secondary)">Klik untuk upload foto</span>
+          }
+        </label>
+        <input id="img-upload" type="file" accept="image/*" hidden (change)="onFileChange($event)" />
+      </div>
+
+      <!-- Name -->
+      <div class="form-group">
+        <label>Nama Produk <span class="required">*</span></label>
+        <input type="text" formControlName="name" placeholder="Baju Batik Lengan Panjang" />
+        @if (form.get('name')?.invalid && form.get('name')?.touched) {
+          <span class="form-error">Nama produk wajib diisi</span>
+        }
+      </div>
+
+      <!-- Description -->
+      <div class="form-group">
+        <label>Deskripsi</label>
+        <textarea formControlName="description" rows="3" placeholder="Deskripsi produk (opsional)"></textarea>
+      </div>
+
+      <!-- Price + Stock row -->
+      <div class="form-row">
+        <div class="form-group">
+          <label>Harga <span class="required">*</span></label>
+          <div class="input-prefix-wrap">
+            <span class="input-prefix">Rp</span>
+            <input type="number" formControlName="price" placeholder="150000" min="0" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Stok <span class="required">*</span></label>
+          <input type="number" formControlName="stock" placeholder="100" min="0" />
+        </div>
+      </div>
+
+      <!-- Weight + Category row -->
+      <div class="form-row">
+        <div class="form-group">
+          <label>Berat <span class="required">*</span></label>
+          <div class="input-suffix-wrap">
+            <input type="number" formControlName="weight_gram" placeholder="500" min="1" />
+            <span class="input-suffix">gram</span>
+          </div>
+          @if (form.get('weight_gram')?.invalid && form.get('weight_gram')?.touched) {
+            <span class="form-error">Berat wajib diisi (min. 1gr)</span>
+          }
+        </div>
+        <div class="form-group">
+          <label>Kategori</label>
+          <select formControlName="category">
+            <option value="">-- Pilih Kategori --</option>
+            @for (cat of categories; track cat) {
+              <option [value]="cat">{{ cat }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <!-- Status -->
+      <div class="form-group status-row">
+        <label>Status Produk</label>
+        <div class="status-toggle" style="margin-top:4px" (click)="form.patchValue({is_active: !form.value.is_active})">
+          <div class="toggle-track" [class.on]="form.value.is_active">
+            <div class="toggle-thumb"></div>
+          </div>
+          <span class="toggle-label">{{ form.value.is_active ? 'Aktif' : 'Nonaktif' }}</span>
+        </div>
+      </div>
+
+      <!-- Variants -->
+      <div class="variants-section">
+        <div class="variants-header">
+          <span class="section-label">Varian Produk</span>
+          <button type="button" class="btn btn-outline btn-sm" (click)="addVariant()">
+            <span class="material-symbols-outlined">add</span> Tambah Varian
+          </button>
+        </div>
+
+        <div formArrayName="variants" class="variants-list">
+          @for (v of variants.controls; track $index) {
+            <div [formGroupName]="$index" class="variant-row">
+              <div class="form-group" style="flex:2">
+                <input type="text" formControlName="variant_name" placeholder="Nama varian (e.g. Ukuran: L)" />
+              </div>
+              <div class="form-group" style="flex:1">
+                <input type="number" formControlName="stock_override" placeholder="Stok" />
+              </div>
+              <div class="form-group" style="flex:1">
+                <input type="number" formControlName="price_override" placeholder="Harga override" />
+              </div>
+              <button type="button" class="icon-btn delete" (click)="removeVariant($index)">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+
+    </div>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <button type="button" class="btn btn-ghost" (click)="showDialog.set(false)">Batal</button>
+    <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="saveProduct()">
+      @if (saving()) {
+        <span class="material-symbols-outlined spinning">progress_activity</span> Menyimpan...
+      } @else {
+        <span class="material-symbols-outlined">save</span> Simpan
+      }
+    </button>
+  </ng-template>
+</p-dialog>

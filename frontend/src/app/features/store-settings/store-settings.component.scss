@@ -1,0 +1,215 @@
+.store-settings-page { max-width: 1100px; }
+.page-header { margin-bottom: 24px; }
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 20px;
+  align-items: start;
+  @media (max-width: 768px) { grid-template-columns: 1fr; }
+}
+
+// ── Tab sidebar ───────────────────────────────────────────────
+.tabs-sidebar {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: sticky;
+  top: 20px;
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  transition: background var(--transition-fast), color var(--transition-fast);
+  text-align: left;
+
+  .material-symbols-outlined { font-size: 20px; }
+  span:nth-child(2) { flex: 1; }
+  .chevron { font-size: 18px !important; opacity: 0; transition: opacity var(--transition-fast); }
+
+  &:hover, &.active {
+    background: var(--color-primary-faint);
+    color: var(--color-primary);
+    .chevron { opacity: 1; }
+  }
+
+  &.active { font-weight: 600; }
+}
+
+// ── Tab content ───────────────────────────────────────────────
+.settings-card { padding: 0; overflow: hidden; }
+
+.card-inner-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-border-light);
+
+  .material-symbols-outlined { font-size: 28px; }
+  h3 { font-size: 0.9375rem; font-weight: 600; margin-bottom: 2px; }
+  p  { font-size: 0.8125rem; color: var(--color-text-secondary); }
+}
+
+// Inner form padding
+.form-group { padding: 0 24px; margin-top: 16px; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding: 0 24px; margin-top: 16px; > .form-group { padding: 0; &:first-child { padding-right: 8px; } &:last-child { padding-left: 8px; } } @media (max-width: 600px) { grid-template-columns: 1fr; } }
+
+.form-actions { padding: 20px 24px; border-top: 1px solid var(--color-border-light); margin-top: 20px; }
+
+label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-text);
+  margin-bottom: 6px;
+}
+
+.form-hint { display: block; margin-top: 4px; font-size: 0.75rem; color: var(--color-text-muted); }
+
+.input-icon-wrap {
+  position: relative;
+  > .material-symbols-outlined:first-child {
+    position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+    font-size: 20px; color: var(--color-text-muted); pointer-events: none;
+  }
+  input {
+    width: 100%;
+    padding: 10px 14px 10px 40px;
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-family: var(--font-sans);
+    outline: none;
+    transition: border-color var(--transition-fast);
+    color: var(--color-text);
+    background: var(--color-surface);
+    &:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(18,140,126,0.12); }
+    &::placeholder { color: var(--color-text-muted); }
+  }
+  &.has-eye input { padding-right: 40px; }
+}
+
+.eye-btn {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  border: none; background: transparent; cursor: pointer;
+  color: var(--color-text-muted); padding: 4px; border-radius: 4px;
+  display: flex; align-items: center;
+  .material-symbols-outlined { font-size: 20px; }
+  &:hover { color: var(--color-text); }
+}
+
+// ── Connection status ──────────────────────────────────────────
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  margin: 16px 24px 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+
+  .material-symbols-outlined { font-size: 20px; }
+
+  &.connected { background: #dcfce7; color: #166534; }
+  &.disconnected { background: #fee2e2; color: #991b1b; }
+}
+
+.status-row { padding: 12px 24px 0; }
+.status-info { display: flex; align-items: center; justify-content: space-between; }
+
+// ── Env selector ──────────────────────────────────────────────
+.env-selector {
+  display: flex;
+  gap: 8px;
+  padding: 16px 24px 0;
+}
+
+.env-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+
+  .material-symbols-outlined { font-size: 18px; }
+
+  &.active {
+    border-color: var(--color-primary);
+    background: var(--color-primary-faint);
+    color: var(--color-primary);
+  }
+  &:hover:not(.active) { background: var(--color-bg); }
+}
+
+// ── Couriers ──────────────────────────────────────────────────
+.courier-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.courier-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+  background: var(--color-surface);
+
+  .material-symbols-outlined { font-size: 18px; }
+
+  &.active {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    background: var(--color-primary-faint);
+    .material-symbols-outlined { color: var(--color-primary); }
+  }
+  &:hover:not(.active) { background: var(--color-bg); }
+}
+
+.info-callout {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-size: 0.875rem;
+  color: #1e40af;
+  margin: 16px 24px 0;
+  .material-symbols-outlined { font-size: 20px; flex-shrink: 0; }
+}
+
+.link { color: #1e40af; font-weight: 500; }
+
+.spinning { animation: spin 0.8s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

@@ -1,0 +1,136 @@
+<div class="app-shell" [class.sidebar-collapsed]="collapsed()" [class.mobile-open]="mobileOpen()">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <!-- Logo -->
+    <div class="sidebar-logo">
+      <div class="logo-icon">
+        <span class="material-symbols-outlined filled">chat</span>
+      </div>
+      @if (!collapsed()) {
+        <div class="logo-text">
+          <span class="logo-name">WaKasir</span>
+          <span class="logo-tagline">Commerce Bot</span>
+        </div>
+      }
+    </div>
+
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
+      @for (group of navGroups; track group.title) {
+        @if (!collapsed()) {
+          <div class="nav-group-label">{{ group.title }}</div>
+        }
+        @for (item of group.items; track item.route) {
+          <a
+            class="nav-item"
+            [routerLink]="item.route"
+            routerLinkActive="active"
+            [title]="collapsed() ? item.label : ''"
+            (click)="closeMobile()"
+          >
+            <span class="nav-icon material-symbols-outlined">{{ item.icon }}</span>
+            @if (!collapsed()) {
+              <span class="nav-label">{{ item.label }}</span>
+            }
+          </a>
+        }
+      }
+    </nav>
+
+    <!-- Sidebar Footer -->
+    <div class="sidebar-footer">
+      @if (!collapsed()) {
+        <div class="plan-badge">
+          <span class="material-symbols-outlined icon-sm filled">workspace_premium</span>
+          <div class="plan-info">
+            <span class="plan-label">Paket aktif</span>
+            <span class="plan-name">{{ business()?.subscription_plan ?? 'Starter' | titlecase }}</span>
+          </div>
+        </div>
+      } @else {
+        <div class="plan-badge-collapsed" [title]="(business()?.subscription_plan ?? 'Starter') | titlecase">
+          <span class="material-symbols-outlined icon-sm filled">workspace_premium</span>
+        </div>
+      }
+    </div>
+  </aside>
+
+  <!-- Mobile overlay -->
+  @if (mobileOpen()) {
+    <div class="sidebar-overlay" (click)="closeMobile()"></div>
+  }
+
+  <!-- Main area -->
+  <div class="main-area">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="toggle-btn" (click)="toggleSidebar()" aria-label="Toggle sidebar">
+          <span class="material-symbols-outlined">{{ mobileOpen() ? 'close' : 'menu' }}</span>
+        </button>
+        <div class="topbar-context hide-mobile">
+          <span class="context-greeting">{{ getGreeting() }}</span>
+          <span class="business-name">{{ business()?.name ?? 'Toko Anda' }}</span>
+        </div>
+      </div>
+
+      <div class="topbar-right">
+        <!-- Quick link -->
+        <a routerLink="/orders" class="topbar-icon-btn hide-mobile" title="Pesanan">
+          <span class="material-symbols-outlined">receipt_long</span>
+        </a>
+
+        <!-- Notification bell -->
+        <button class="topbar-icon-btn" title="Notifikasi">
+          <span class="material-symbols-outlined">notifications</span>
+          <span class="notif-dot"></span>
+        </button>
+
+        <!-- User menu -->
+        <div class="user-menu-wrap">
+          <button class="user-avatar-btn" (click)="toggleUserMenu()">
+            <div class="avatar">{{ getInitials() }}</div>
+            <div class="user-info hide-mobile">
+              <span class="user-name">{{ user()?.name ?? 'Pengguna' }}</span>
+              <span class="user-email">{{ user()?.email ?? '' }}</span>
+            </div>
+            <span class="material-symbols-outlined chevron hide-mobile">expand_more</span>
+          </button>
+
+          @if (userMenuOpen()) {
+            <div class="user-dropdown">
+              <div class="dropdown-header">
+                <div class="avatar avatar-lg">{{ getInitials() }}</div>
+                <div>
+                  <div class="dropdown-name">{{ user()?.name ?? 'Pengguna' }}</div>
+                  <div class="dropdown-email">{{ user()?.email ?? '' }}</div>
+                </div>
+              </div>
+              <div class="dropdown-divider"></div>
+              <a [routerLink]="'/store-settings'" class="dropdown-item" (click)="userMenuOpen.set(false)">
+                <span class="material-symbols-outlined">manage_accounts</span>
+                Profil & Pengaturan
+              </a>
+              <a [routerLink]="'/subscription'" class="dropdown-item" (click)="userMenuOpen.set(false)">
+                <span class="material-symbols-outlined">workspace_premium</span>
+                Langganan
+              </a>
+              <div class="dropdown-divider"></div>
+              <button class="dropdown-item danger" (click)="logout()">
+                <span class="material-symbols-outlined">logout</span>
+                Keluar
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+    </header>
+
+    <!-- Page content -->
+    <main class="page-content">
+      <router-outlet />
+    </main>
+  </div>
+</div>

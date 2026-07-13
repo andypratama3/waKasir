@@ -1,0 +1,122 @@
+<p-toast position="top-right" />
+
+<div class="auth-page">
+  <!-- Left panel -->
+  <div class="auth-left">
+    <div class="auth-left-content">
+      <div class="brand-logo">
+        <span class="material-symbols-outlined filled">chat</span>
+      </div>
+      <h1 class="brand-title">WaKasir</h1>
+      <p class="brand-subtitle">Mulai otomasi toko Anda dalam hitungan menit. Gratis 14 hari.</p>
+      <div class="steps-list">
+        <div class="step-item">
+          <div class="step-num">1</div>
+          <span>Daftar & buat akun toko</span>
+        </div>
+        <div class="step-item">
+          <div class="step-num">2</div>
+          <span>Hubungkan WhatsApp Business</span>
+        </div>
+        <div class="step-item">
+          <div class="step-num">3</div>
+          <span>Upload produk & mulai terima order</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right panel -->
+  <div class="auth-right">
+    <div class="auth-card">
+      <div class="auth-card-header">
+        <h2>Buat akun gratis</h2>
+        <p>Tidak perlu kartu kredit</p>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+        <!-- Nama Lengkap -->
+        <div class="form-group">
+          <label>Nama Lengkap</label>
+          <div class="input-icon-wrap">
+            <span class="material-symbols-outlined">person</span>
+            <input type="text" formControlName="name" placeholder="Budi Santoso" autocomplete="name" />
+          </div>
+          @if (name.invalid && name.touched) {
+            <span class="form-error">Nama wajib diisi (min. 2 karakter)</span>
+          }
+        </div>
+
+        <!-- Nama Toko -->
+        <div class="form-group">
+          <label>Nama Toko</label>
+          <div class="input-icon-wrap">
+            <span class="material-symbols-outlined">store</span>
+            <input type="text" formControlName="business_name" placeholder="Toko Batik Anda" />
+          </div>
+          @if (businessName.invalid && businessName.touched) {
+            <span class="form-error">Nama toko wajib diisi</span>
+          }
+        </div>
+
+        <!-- Email -->
+        <div class="form-group">
+          <label>Email</label>
+          <div class="input-icon-wrap">
+            <span class="material-symbols-outlined">email</span>
+            <input type="email" formControlName="email" placeholder="nama@email.com" autocomplete="email" />
+          </div>
+          @if (email.invalid && email.touched) {
+            <span class="form-error">
+              {{ email.hasError('required') ? 'Email wajib diisi' : 'Format email tidak valid' }}
+            </span>
+          }
+        </div>
+
+        <!-- Password -->
+        <div class="form-group">
+          <label>Password</label>
+          <div class="input-icon-wrap">
+            <span class="material-symbols-outlined">lock</span>
+            <input [type]="showPassword() ? 'text' : 'password'" formControlName="password" placeholder="Min. 8 karakter" />
+            <button type="button" class="eye-btn" (click)="showPassword.update(v => !v)">
+              <span class="material-symbols-outlined">{{ showPassword() ? 'visibility_off' : 'visibility' }}</span>
+            </button>
+          </div>
+          @if (password.invalid && password.touched) {
+            <span class="form-error">Password min. 8 karakter</span>
+          }
+        </div>
+
+        <!-- Confirm Password -->
+        <div class="form-group">
+          <label>Konfirmasi Password</label>
+          <div class="input-icon-wrap">
+            <span class="material-symbols-outlined">lock_reset</span>
+            <input [type]="showConfirm() ? 'text' : 'password'" formControlName="password_confirmation" placeholder="Ulangi password" />
+            <button type="button" class="eye-btn" (click)="showConfirm.update(v => !v)">
+              <span class="material-symbols-outlined">{{ showConfirm() ? 'visibility_off' : 'visibility' }}</span>
+            </button>
+          </div>
+          @if (confirm.hasError('mismatch') && confirm.touched) {
+            <span class="form-error">Password tidak cocok</span>
+          }
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block btn-lg submit-btn" [disabled]="loading()">
+          @if (loading()) {
+            <span class="material-symbols-outlined spinning">progress_activity</span>
+            Mendaftarkan...
+          } @else {
+            <span class="material-symbols-outlined">how_to_reg</span>
+            Daftar Gratis
+          }
+        </button>
+      </form>
+
+      <p class="auth-footer-text">
+        Sudah punya akun? <a routerLink="/login" class="auth-link">Masuk sekarang</a>
+      </p>
+    </div>
+  </div>
+</div>

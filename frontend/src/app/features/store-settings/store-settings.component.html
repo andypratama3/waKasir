@@ -1,0 +1,253 @@
+<p-toast position="top-right" />
+
+<div class="store-settings-page page-enter">
+
+  <div class="page-header">
+    <h1 class="page-title">
+      <span class="material-symbols-outlined">store</span>
+      Pengaturan Toko
+    </h1>
+    <p class="page-subtitle">Kelola profil toko dan integrasi layanan</p>
+  </div>
+
+  <div class="settings-grid">
+    <!-- Tabs sidebar -->
+    <div class="tabs-sidebar card">
+      @for (tab of tabs; track tab.label; let i = $index) {
+        <button class="tab-btn" [class.active]="activeTab() === i" (click)="setTab(i)">
+          <span class="material-symbols-outlined">{{ tab.icon }}</span>
+          <span>{{ tab.label }}</span>
+          <span class="material-symbols-outlined chevron">chevron_right</span>
+        </button>
+      }
+    </div>
+
+    <!-- Tab content -->
+    <div class="tab-content">
+
+      <!-- ── Tab 0: Profil Toko ── -->
+      @if (activeTab() === 0) {
+        <div class="card settings-card" [formGroup]="profileForm">
+          <div class="card-inner-header">
+            <span class="material-symbols-outlined">store</span>
+            <div>
+              <h3>Profil Toko</h3>
+              <p>Informasi dasar toko Anda</p>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Nama Toko</label>
+            <div class="input-icon-wrap">
+              <span class="material-symbols-outlined">storefront</span>
+              <input type="text" formControlName="name" placeholder="Nama toko Anda" />
+            </div>
+          </div>
+          @if (business) {
+            <div class="status-row">
+              <div class="status-info">
+                <span>Status Akun</span>
+                <span class="status-badge" [class.status-completed]="business.status === 'active'" [class.status-cancelled]="business.status !== 'active'">
+                  <span class="status-dot"></span>
+                  {{ business.status === 'active' ? 'Aktif' : 'Nonaktif' }}
+                </span>
+              </div>
+            </div>
+          }
+          <div class="form-actions">
+            <button class="btn btn-primary" [disabled]="savingProfile()" (click)="saveProfile()">
+              @if (savingProfile()) { <span class="material-symbols-outlined spinning">progress_activity</span> Menyimpan... }
+              @else { <span class="material-symbols-outlined">save</span> Simpan Profil }
+            </button>
+          </div>
+        </div>
+      }
+
+      <!-- ── Tab 1: WhatsApp ── -->
+      @if (activeTab() === 1) {
+        <div class="card settings-card" [formGroup]="waForm">
+          <div class="card-inner-header">
+            <span class="material-symbols-outlined" style="color:#25D366">chat</span>
+            <div>
+              <h3>Integrasi WhatsApp Business</h3>
+              <p>Hubungkan nomor WhatsApp Business API Anda</p>
+            </div>
+          </div>
+
+          @if (business?.wa_phone_number) {
+            <div class="connection-status connected">
+              <span class="material-symbols-outlined filled">check_circle</span>
+              Terhubung: {{ business.wa_phone_number }}
+            </div>
+          } @else {
+            <div class="connection-status disconnected">
+              <span class="material-symbols-outlined">cancel</span>
+              Belum terhubung
+            </div>
+          }
+
+          <div class="form-group">
+            <label>Nomor WhatsApp Business</label>
+            <div class="input-icon-wrap">
+              <span class="material-symbols-outlined">phone</span>
+              <input type="text" formControlName="wa_phone_number" placeholder="628123456789" />
+            </div>
+            <span class="form-hint">Format: 628xxx (tanpa + atau spasi)</span>
+          </div>
+
+          <div class="form-group">
+            <label>WhatsApp Phone Number ID</label>
+            <div class="input-icon-wrap">
+              <span class="material-symbols-outlined">tag</span>
+              <input type="text" formControlName="wa_phone_id" placeholder="123456789012345" />
+            </div>
+            <span class="form-hint">Dapat ditemukan di Meta Business Manager → WhatsApp Manager</span>
+          </div>
+
+          <div class="info-callout">
+            <span class="material-symbols-outlined">info</span>
+            <div>
+              Anda memerlukan <strong>akun Meta Business</strong> dan nomor WhatsApp Business API aktif.
+              <a href="https://business.facebook.com" target="_blank" class="link">Buka Meta Business Manager →</a>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn btn-primary" [disabled]="savingWa()" (click)="saveWa()">
+              @if (savingWa()) { <span class="material-symbols-outlined spinning">progress_activity</span> Menyimpan... }
+              @else { <span class="material-symbols-outlined">save</span> Simpan Integrasi }
+            </button>
+          </div>
+        </div>
+      }
+
+      <!-- ── Tab 2: Midtrans ── -->
+      @if (activeTab() === 2) {
+        <div class="card settings-card" [formGroup]="midtransForm">
+          <div class="card-inner-header">
+            <span class="material-symbols-outlined" style="color:#0099cc">qr_code_2</span>
+            <div>
+              <h3>Integrasi Midtrans</h3>
+              <p>Untuk generate QRIS dan konfirmasi pembayaran otomatis</p>
+            </div>
+          </div>
+
+          <!-- Environment -->
+          <div class="env-selector">
+            <button class="env-btn" [class.active]="midtransEnv() === 'sandbox'" (click)="midtransEnv.set('sandbox')">
+              <span class="material-symbols-outlined">science</span> Sandbox
+            </button>
+            <button class="env-btn" [class.active]="midtransEnv() === 'production'" (click)="midtransEnv.set('production')">
+              <span class="material-symbols-outlined">rocket_launch</span> Production
+            </button>
+          </div>
+
+          <div class="form-group">
+            <label>Server Key</label>
+            <div class="input-icon-wrap has-eye">
+              <span class="material-symbols-outlined">key</span>
+              <input [type]="showMidtransServer() ? 'text' : 'password'" formControlName="midtrans_server_key" placeholder="SB-Mid-server-xxxx atau Mid-server-xxxx" />
+              <button type="button" class="eye-btn" (click)="showMidtransServer.update(v => !v)">
+                <span class="material-symbols-outlined">{{ showMidtransServer() ? 'visibility_off' : 'visibility' }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Client Key</label>
+            <div class="input-icon-wrap has-eye">
+              <span class="material-symbols-outlined">vpn_key</span>
+              <input [type]="showMidtransClient() ? 'text' : 'password'" formControlName="midtrans_client_key" placeholder="SB-Mid-client-xxxx" />
+              <button type="button" class="eye-btn" (click)="showMidtransClient.update(v => !v)">
+                <span class="material-symbols-outlined">{{ showMidtransClient() ? 'visibility_off' : 'visibility' }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Merchant ID</label>
+            <div class="input-icon-wrap">
+              <span class="material-symbols-outlined">storefront</span>
+              <input type="text" formControlName="midtrans_merchant_id" placeholder="Gxxxxxx" />
+            </div>
+          </div>
+
+          <div class="info-callout">
+            <span class="material-symbols-outlined">info</span>
+            <div>
+              Credentials dapat ditemukan di <a href="https://dashboard.midtrans.com" target="_blank" class="link">Midtrans Dashboard</a> → Settings → Access Keys
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn btn-primary" [disabled]="savingMidtrans()" (click)="saveMidtrans()">
+              @if (savingMidtrans()) { <span class="material-symbols-outlined spinning">progress_activity</span> Menyimpan... }
+              @else { <span class="material-symbols-outlined">save</span> Simpan Integrasi }
+            </button>
+          </div>
+        </div>
+      }
+
+      <!-- ── Tab 3: RajaOngkir ── -->
+      @if (activeTab() === 3) {
+        <div class="card settings-card" [formGroup]="rajaOngkirForm">
+          <div class="card-inner-header">
+            <span class="material-symbols-outlined" style="color:#e67e22">local_shipping</span>
+            <div>
+              <h3>Integrasi RajaOngkir</h3>
+              <p>Untuk kalkulasi ongkir otomatis ke seluruh Indonesia</p>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>API Key RajaOngkir</label>
+            <div class="input-icon-wrap has-eye">
+              <span class="material-symbols-outlined">key</span>
+              <input [type]="showRajaOngkirKey() ? 'text' : 'password'" formControlName="rajaongkir_api_key" placeholder="API Key dari rajaongkir.com" />
+              <button type="button" class="eye-btn" (click)="showRajaOngkirKey.update(v => !v)">
+                <span class="material-symbols-outlined">{{ showRajaOngkirKey() ? 'visibility_off' : 'visibility' }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Kota Asal (Origin)</label>
+              <div class="input-icon-wrap">
+                <span class="material-symbols-outlined">location_city</span>
+                <input type="text" formControlName="origin_city_id" placeholder="Nama atau ID kota asal" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Alamat Toko Lengkap</label>
+              <div class="input-icon-wrap">
+                <span class="material-symbols-outlined">home</span>
+                <input type="text" formControlName="origin_address" placeholder="Jl. Contoh No. 1, Jakarta" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Couriers -->
+          <div class="form-group">
+            <label>Kurir Aktif</label>
+            <div class="courier-grid">
+              @for (courier of availableCouriers; track courier) {
+                <div class="courier-item" [class.active]="isCourierActive(courier)" (click)="toggleCourier(courier)">
+                  <span class="material-symbols-outlined">{{ isCourierActive(courier) ? 'check_circle' : 'radio_button_unchecked' }}</span>
+                  {{ courier }}
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn btn-primary" [disabled]="savingRajaOngkir()" (click)="saveRajaOngkir()">
+              @if (savingRajaOngkir()) { <span class="material-symbols-outlined spinning">progress_activity</span> Menyimpan... }
+              @else { <span class="material-symbols-outlined">save</span> Simpan Integrasi }
+            </button>
+          </div>
+        </div>
+      }
+
+    </div>
+  </div>
+</div>

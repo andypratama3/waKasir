@@ -1,0 +1,111 @@
+<p-toast position="top-right" />
+
+<div class="auth-page">
+  <!-- Left panel -->
+  <div class="auth-left">
+    <div class="auth-left-content">
+      <div class="brand-logo">
+        <span class="material-symbols-outlined filled">chat</span>
+      </div>
+      <h1 class="brand-title">WaKasir</h1>
+      <p class="brand-subtitle">Platform WhatsApp Commerce untuk bisnis Anda. Otomatis, cepat, dan mudah.</p>
+
+      <div class="feature-list">
+        <div class="feature-item">
+          <span class="material-symbols-outlined">bolt</span>
+          <span>Bot WhatsApp otomatis 24/7</span>
+        </div>
+        <div class="feature-item">
+          <span class="material-symbols-outlined">qr_code_2</span>
+          <span>QRIS Midtrans terintegrasi</span>
+        </div>
+        <div class="feature-item">
+          <span class="material-symbols-outlined">local_shipping</span>
+          <span>Ongkir otomatis via RajaOngkir</span>
+        </div>
+        <div class="feature-item">
+          <span class="material-symbols-outlined">analytics</span>
+          <span>Dashboard analitik real-time</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right panel: form -->
+  <div class="auth-right">
+    <div class="auth-card">
+      <div class="auth-card-header">
+        <h2>Selamat datang kembali</h2>
+        <p>Masuk ke dashboard toko Anda</p>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+        <!-- Email -->
+        <div class="form-group">
+          <label for="email">Email</label>
+          <div class="input-icon-wrap">
+            <span class="material-symbols-outlined">email</span>
+            <input
+              id="email"
+              type="email"
+              formControlName="email"
+              placeholder="nama@email.com"
+              autocomplete="email"
+            />
+          </div>
+          @if (email.invalid && email.touched) {
+            <span class="form-error">
+              {{ email.hasError('required') ? 'Email wajib diisi' : 'Format email tidak valid' }}
+            </span>
+          }
+        </div>
+
+        <!-- Password -->
+        <div class="form-group">
+          <label for="password">
+            Password
+            <a routerLink="/forgot-password" class="forgot-link">Lupa password?</a>
+          </label>
+          <div class="input-icon-wrap">
+            <span class="material-symbols-outlined">lock</span>
+            <input
+              id="password"
+              [type]="showPassword() ? 'text' : 'password'"
+              formControlName="password"
+              placeholder="••••••••"
+              autocomplete="current-password"
+            />
+            <button type="button" class="eye-btn" (click)="togglePassword()">
+              <span class="material-symbols-outlined">
+                {{ showPassword() ? 'visibility_off' : 'visibility' }}
+              </span>
+            </button>
+          </div>
+          @if (password.invalid && password.touched) {
+            <span class="form-error">Password wajib diisi</span>
+          }
+        </div>
+
+        <!-- Submit -->
+        <button
+          type="submit"
+          class="btn btn-primary btn-block btn-lg submit-btn"
+          [disabled]="loading()"
+        >
+          @if (loading()) {
+            <span class="material-symbols-outlined spinning">progress_activity</span>
+            Memproses...
+          } @else {
+            <span class="material-symbols-outlined">login</span>
+            Masuk
+          }
+        </button>
+      </form>
+
+      <p class="auth-footer-text">
+        Belum punya akun?
+        <a routerLink="/register" class="auth-link">Daftar gratis</a>
+      </p>
+    </div>
+  </div>
+</div>

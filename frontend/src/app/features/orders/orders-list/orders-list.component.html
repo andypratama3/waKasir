@@ -1,0 +1,311 @@
+<p-toast position="top-right" />
+
+<div class="orders-page page-enter">
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">
+        <span class="material-symbols-outlined">receipt_long</span>
+        Pesanan
+      </h1>
+      <p class="page-subtitle">Kelola dan pantau semua pesanan masuk</p>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-bar card">
+    <div class="filter-search">
+      <span class="material-symbols-outlined">search</span>
+      <input
+        type="text"
+        placeholder="Cari no. order atau WA pelanggan..."
+        [value]="filterSearch()"
+        (input)="filterSearch.set($any($event.target).value); loadOrders()"
+      />
+    </div>
+    <div class="filter-status">
+      <select [value]="filterStatus()" (change)="filterStatus.set($any($event.target).value); loadOrders()">
+        @for (opt of statusOptions; track opt.value) {
+          <option [value]="opt.value">{{ opt.label }}</option>
+        }
+      </select>
+    </div>
+    <div class="filter-dates">
+      <input type="date" [value]="filterFrom()" (change)="filterFrom.set($any($event.target).value); loadOrders()" />
+      <span>s/d</span>
+      <input type="date" [value]="filterTo()" (change)="filterTo.set($any($event.target).value); loadOrders()" />
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="data-table-wrap">
+    @if (loading()) {
+      <div class="skeleton-rows">
+        @for (i of [1,2,3,4,5]; track i) {
+          <div class="skeleton-row">
+            <p-skeleton height="16px" width="120px" />
+            <p-skeleton height="16px" width="160px" />
+            <p-skeleton height="16px" width="90px" />
+            <p-skeleton height="16px" width="80px" />
+            <p-skeleton height="24px" width="80px" borderRadius="20px" />
+            <p-skeleton height="32px" width="40px" borderRadius="8px" />
+          </div>
+        }
+      </div>
+    } @else if (orders().length === 0) {
+      <div class="empty-state-full">
+        <span class="material-symbols-outlined" style="font-size:56px;color:#d1d5db">receipt_long</span>
+        <h3>Belum ada pesanan</h3>
+        <p>Pesanan dari pelanggan akan muncul di sini</p>
+      </div>
+    } @else {
+      <p-table
+        [value]="orders()"
+        [paginator]="orders().length > 15"
+        [rows]="15"
+        styleClass="orders-table"
+      >
+        <ng-template pTemplate="header">
+          <tr>
+            <th pSortableColumn="order_number">No. Order</th>
+            <th>Pelanggan</th>
+            <th>Produk</th>
+            <th pSortableColumn="total_amount">Total</th>
+            <th>Kurir</th>
+            <th pSortableColumn="status">Status</th>
+            <th pSortableColumn="created_at">Tanggal</th>
+            <th style="width:60px">Aksi</th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-order>
+          <tr class="order-row" (click)="openDetail(order)" style="cursor:pointer">
+            <td>
+              <span class="order-number">#{{ order.order_number }}</span>
+            </td>
+            <td>
+              <div class="customer-cell">
+                <span class="customer-name">{{ order.customer?.name ?? 'Pelanggan' }}</span>
+                <a class="wa-link" [href]="waLink(order.customer?.wa_number)" target="_blank" (click)="$event.stopPropagation()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                  {{ order.customer?.wa_number }}
+                </a>
+              </div>
+            </td>
+            <td>
+              <span class="items-summary">{{ order.items?.length ?? 0 }} item</span>
+            </td>
+            <td class="font-semibold">{{ order.total_amount | rupiah }}</td>
+            <td>
+              @if (order.courier_name) {
+                <span class="courier-badge">{{ order.courier_name }} {{ order.courier_service }}</span>
+              } @else { <span class="text-muted">-</span> }
+            </td>
+            <td><span [class]="getStatusClass(order.status)"><span class="status-dot"></span>{{ order.status }}</span></td>
+            <td>{{ order.created_at | date:'dd/MM/yy' }}</td>
+            <td (click)="$event.stopPropagation()">
+              <button class="icon-btn edit" pTooltip="Detail" tooltipPosition="top" (click)="openDetail(order)">
+                <span class="material-symbols-outlined">visibility</span>
+              </button>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    }
+  </div>
+</div>
+
+<!-- ── Order Detail Dialog ── -->
+<p-dialog
+  [visible]="showDetail()"
+  (visibleChange)="showDetail.set($event)"
+  header="Detail Pesanan"
+  [modal]="true"
+  [style]="{ width: '760px' }"
+  [breakpoints]="{ '768px': '95vw' }"
+  [draggable]="false"
+>
+  @if (selectedOrder()) {
+    <div class="order-detail">
+
+      <!-- Header -->
+      <div class="detail-header">
+        <div>
+          <div class="detail-order-num">#{{ selectedOrder().order_number }}</div>
+          <div class="detail-date">{{ selectedOrder().created_at | date:'dd MMMM yyyy, HH:mm' }}</div>
+        </div>
+        <span [class]="getStatusClass(selectedOrder().status)" style="font-size:0.875rem; padding:6px 14px">
+          <span class="status-dot"></span>
+          {{ selectedOrder().status }}
+        </span>
+      </div>
+
+      <!-- Status Timeline -->
+      @if (selectedOrder().status !== 'cancelled') {
+        <div class="status-timeline">
+          @for (step of timelineSteps; track step.status) {
+            <div class="timeline-step" [class]="getStepClass(step, selectedOrder().status)">
+              <div class="step-circle">
+                <span class="material-symbols-outlined">{{ step.icon }}</span>
+              </div>
+              <span class="step-label">{{ step.label }}</span>
+            </div>
+            @if (!$last) { <div class="timeline-line"></div> }
+          }
+        </div>
+      }
+
+      <div class="detail-grid">
+        <!-- Left col: items + shipping -->
+        <div class="detail-left">
+
+          <!-- Order Items -->
+          <div class="detail-section">
+            <h4 class="detail-section-title">
+              <span class="material-symbols-outlined icon-sm">shopping_cart</span>
+              Item Pesanan
+            </h4>
+            @for (item of selectedOrder().items; track item.id) {
+              <div class="order-item-row">
+                <div class="item-thumb">
+                  @if (item.product?.image_url) {
+                    <img [src]="item.product.image_url" [alt]="item.product?.name" />
+                  } @else {
+                    <span class="material-symbols-outlined" style="color:#d1d5db">image</span>
+                  }
+                </div>
+                <div class="item-info">
+                  <span class="item-name">{{ item.product?.name }}</span>
+                  @if (item.variant_name) { <span class="item-variant">{{ item.variant_name }}</span> }
+                </div>
+                <div class="item-qty">x{{ item.qty }}</div>
+                <div class="item-price">{{ item.price_at_order | rupiah }}</div>
+              </div>
+            }
+            <div class="order-totals">
+              <div class="total-row"><span>Subtotal</span><span>{{ selectedOrder().subtotal | rupiah }}</span></div>
+              <div class="total-row"><span>Ongkir</span><span>{{ selectedOrder().shipping_cost | rupiah }}</span></div>
+              <div class="total-row total-final"><span>Total</span><span>{{ selectedOrder().total_amount | rupiah }}</span></div>
+            </div>
+          </div>
+
+          <!-- Shipping info -->
+          @if (getAddress(selectedOrder())) {
+            <div class="detail-section">
+              <h4 class="detail-section-title">
+                <span class="material-symbols-outlined icon-sm">local_shipping</span>
+                Pengiriman
+              </h4>
+              <div class="info-row"><span>Penerima</span><span>{{ getAddress(selectedOrder()).recipient_name }}</span></div>
+              <div class="info-row"><span>Alamat</span><span>{{ getAddress(selectedOrder()).full_address }}, {{ getAddress(selectedOrder()).city_name }}</span></div>
+              <div class="info-row"><span>Kurir</span><span>{{ selectedOrder().courier_name }} {{ selectedOrder().courier_service }}</span></div>
+              @if (selectedOrder().tracking_number) {
+                <div class="info-row">
+                  <span>Resi</span>
+                  <span class="tracking-num">{{ selectedOrder().tracking_number }}</span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Right col: customer + payment + actions -->
+        <div class="detail-right">
+
+          <!-- Customer -->
+          <div class="detail-section">
+            <h4 class="detail-section-title">
+              <span class="material-symbols-outlined icon-sm">person</span>
+              Pelanggan
+            </h4>
+            <div class="info-row"><span>Nama</span><span>{{ selectedOrder().customer?.name ?? '-' }}</span></div>
+            <div class="info-row">
+              <span>WhatsApp</span>
+              <a [href]="waLink(selectedOrder().customer?.wa_number)" target="_blank" class="wa-link-detail">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                Chat di WhatsApp
+              </a>
+            </div>
+          </div>
+
+          <!-- Payment -->
+          @if (getPayment(selectedOrder())) {
+            <div class="detail-section">
+              <h4 class="detail-section-title">
+                <span class="material-symbols-outlined icon-sm">payments</span>
+                Pembayaran
+              </h4>
+              <div class="info-row"><span>Status</span>
+                <span [class]="getStatusClass(getPayment(selectedOrder()).status)">
+                  <span class="status-dot"></span>{{ getPayment(selectedOrder()).status }}
+                </span>
+              </div>
+              @if (getPayment(selectedOrder()).paid_at) {
+                <div class="info-row"><span>Dibayar</span><span>{{ getPayment(selectedOrder()).paid_at | date:'dd/MM/yy HH:mm' }}</span></div>
+              }
+            </div>
+          }
+
+          <!-- Actions -->
+          <div class="detail-section actions-section">
+            <h4 class="detail-section-title">
+              <span class="material-symbols-outlined icon-sm">bolt</span>
+              Tindakan
+            </h4>
+
+            @if (canProcess(selectedOrder().status)) {
+              <button class="btn btn-primary w-full" [disabled]="savingStatus()" (click)="updateStatus('processing')">
+                <span class="material-symbols-outlined">play_arrow</span>
+                Mulai Proses
+              </button>
+            }
+
+            <!-- Tracking input (shown when processing) -->
+            @if (canShip(selectedOrder().status)) {
+              <div class="tracking-input-wrap">
+                <label>Nomor Resi</label>
+                <div class="tracking-row">
+                  <input type="text" placeholder="cth: JNE123456" [value]="trackingInput()" (input)="trackingInput.set($any($event.target).value)" />
+                  <button class="btn btn-primary" [disabled]="savingTracking() || !trackingInput().trim()" (click)="saveTracking()">
+                    @if (savingTracking()) {
+                      <span class="material-symbols-outlined spinning">progress_activity</span>
+                    } @else {
+                      <span class="material-symbols-outlined">send</span>
+                    }
+                  </button>
+                </div>
+              </div>
+            }
+
+            @if (canComplete(selectedOrder().status)) {
+              <button class="btn btn-primary w-full" [disabled]="savingStatus()" (click)="updateStatus('completed')">
+                <span class="material-symbols-outlined">check_circle</span>
+                Tandai Selesai
+              </button>
+            }
+
+            @if (canCancel(selectedOrder().status)) {
+              <button class="btn btn-danger w-full" style="margin-top:8px" [disabled]="savingStatus()" (click)="updateStatus('cancelled')">
+                <span class="material-symbols-outlined">cancel</span>
+                Batalkan Order
+              </button>
+            }
+
+            @if (selectedOrder().status === 'shipped' && selectedOrder().tracking_number) {
+              <div class="tracking-input-wrap">
+                <label>Update Resi</label>
+                <div class="tracking-row">
+                  <input type="text" [value]="trackingInput()" (input)="trackingInput.set($any($event.target).value)" />
+                  <button class="btn btn-outline" [disabled]="savingTracking()" (click)="saveTracking()">
+                    <span class="material-symbols-outlined">edit</span>
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+
+        </div>
+      </div>
+    </div>
+  }
+</p-dialog>

@@ -1,0 +1,214 @@
+<p-toast position="top-right" />
+
+<div class="bot-settings-page page-enter">
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">
+        <span class="material-symbols-outlined">smart_toy</span>
+        Pengaturan Bot
+      </h1>
+      <p class="page-subtitle">Kustomisasi pesan dan perilaku bot WhatsApp Anda</p>
+    </div>
+    <button class="btn btn-primary" [disabled]="saving()" (click)="save()">
+      @if (saving()) {
+        <span class="material-symbols-outlined spinning">progress_activity</span> Menyimpan...
+      } @else {
+        <span class="material-symbols-outlined">save</span> Simpan Pengaturan
+      }
+    </button>
+  </div>
+
+  <div class="settings-layout" [formGroup]="form">
+
+    <!-- Greeting -->
+    <div class="settings-section card">
+      <div class="section-header">
+        <div class="section-icon" style="background:#e6f4f2;color:#128C7E">
+          <span class="material-symbols-outlined">waving_hand</span>
+        </div>
+        <div>
+          <h3>Pesan Sapaan</h3>
+          <p>Pesan pertama yang diterima pelanggan saat mulai chat</p>
+        </div>
+      </div>
+
+      <div class="section-body">
+        <div class="editor-preview-grid">
+          <div class="editor-col">
+            <label>Isi Pesan Sapaan</label>
+            <textarea formControlName="greeting_message" rows="8" placeholder="Tulis pesan sapaan..."></textarea>
+            <div class="char-count">{{ form.value.greeting_message?.length ?? 0 }} karakter</div>
+          </div>
+          <div class="preview-col">
+            <label>Preview</label>
+            <div class="wa-preview">
+              <div class="wa-preview-header">
+                <div class="wa-avatar"><span class="material-symbols-outlined">smart_toy</span></div>
+                <div><div class="wa-name">Bot Toko</div><div class="wa-status">online</div></div>
+              </div>
+              <div class="wa-messages">
+                <div class="wa-bubble bot">
+                  <pre>{{ form.value.greeting_message }}</pre>
+                  <div class="bubble-time">10:30</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Jam Operasional -->
+    <div class="settings-section card">
+      <div class="section-header">
+        <div class="section-icon" style="background:#fef3c7;color:#b45309">
+          <span class="material-symbols-outlined">schedule</span>
+        </div>
+        <div>
+          <h3>Jam Operasional</h3>
+          <p>Bot tetap menerima order di luar jam ini, namun pelanggan diberi tahu kapan diproses</p>
+        </div>
+        <div class="status-toggle section-toggle" (click)="toggleOperating()">
+          <div class="toggle-track" [class.on]="form.value.operating_enabled">
+            <div class="toggle-thumb"></div>
+          </div>
+          <span class="toggle-label">{{ form.value.operating_enabled ? 'Aktif' : 'Nonaktif' }}</span>
+        </div>
+      </div>
+
+      @if (form.value.operating_enabled) {
+        <div class="section-body">
+          <div class="time-range-row">
+            <div class="form-group">
+              <label>
+                <span class="material-symbols-outlined icon-sm">wb_sunny</span>
+                Jam Buka
+              </label>
+              <input type="time" formControlName="operating_start" />
+            </div>
+            <div class="time-separator">
+              <span class="material-symbols-outlined">arrow_forward</span>
+            </div>
+            <div class="form-group">
+              <label>
+                <span class="material-symbols-outlined icon-sm">bedtime</span>
+                Jam Tutup
+              </label>
+              <input type="time" formControlName="operating_end" />
+            </div>
+          </div>
+          <div class="info-callout">
+            <span class="material-symbols-outlined">info</span>
+            Di luar jam <strong>{{ form.value.operating_start }}</strong>–<strong>{{ form.value.operating_end }}</strong>, bot tetap menerima pesanan dengan notifikasi "akan diproses pada jam buka berikutnya."
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Fallback -->
+    <div class="settings-section card">
+      <div class="section-header">
+        <div class="section-icon" style="background:#fee2e2;color:#991b1b">
+          <span class="material-symbols-outlined">help</span>
+        </div>
+        <div>
+          <h3>Pesan Fallback</h3>
+          <p>Ditampilkan saat bot tidak mengenali pesan pelanggan (sebelum dialihkan ke admin)</p>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="editor-preview-grid">
+          <div class="editor-col">
+            <label>Pesan Fallback</label>
+            <textarea formControlName="fallback_message" rows="5" placeholder="Tulis pesan fallback..."></textarea>
+          </div>
+          <div class="preview-col">
+            <label>Preview</label>
+            <div class="wa-preview">
+              <div class="wa-preview-header">
+                <div class="wa-avatar"><span class="material-symbols-outlined">smart_toy</span></div>
+                <div><div class="wa-name">Bot Toko</div></div>
+              </div>
+              <div class="wa-messages">
+                <div class="wa-bubble user"><pre>halo bisa mesen seblak?</pre><div class="bubble-time">11:20</div></div>
+                <div class="wa-bubble bot"><pre>{{ form.value.fallback_message }}</pre><div class="bubble-time">11:20</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bot Flow Preview -->
+    <div class="settings-section card">
+      <div class="section-header">
+        <div class="section-icon" style="background:#f3e8ff;color:#7c3aed">
+          <span class="material-symbols-outlined">preview</span>
+        </div>
+        <div>
+          <h3>Simulasi Alur Bot</h3>
+          <p>Gambaran percakapan pelanggan dari awal sampai selesai bayar</p>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="flow-preview-wrap">
+          <div class="wa-preview full-preview">
+            <div class="wa-preview-header">
+              <div class="wa-avatar"><span class="material-symbols-outlined">smart_toy</span></div>
+              <div><div class="wa-name">Bot Toko</div><div class="wa-status">simulasi</div></div>
+            </div>
+            <div class="wa-messages">
+              <div class="wa-bubble user"><pre>halo</pre><div class="bubble-time">10:00</div></div>
+              <div class="wa-bubble bot"><pre>{{ form.value.greeting_message }}</pre><div class="bubble-time">10:00</div></div>
+              <div class="wa-bubble user"><pre>1</pre><div class="bubble-time">10:01</div></div>
+              <div class="wa-bubble bot"><pre>Berikut produk kami:
+
+1. Baju Batik Lengan Panjang - Rp150.000
+2. Kaos Polos - Rp85.000
+3. Celana Jeans - Rp200.000
+
+Ketik nomor untuk memilih produk:</pre><div class="bubble-time">10:01</div></div>
+              <div class="wa-bubble user"><pre>1</pre><div class="bubble-time">10:02</div></div>
+              <div class="wa-bubble bot"><pre>Baju Batik Lengan Panjang - Rp150.000
+
+Pilih ukuran:
+1. S  2. M  3. L  4. XL</pre><div class="bubble-time">10:02</div></div>
+              <div class="wa-bubble user"><pre>3</pre><div class="bubble-time">10:03</div></div>
+              <div class="wa-bubble bot"><pre>✅ Ditambahkan ke keranjang:
+• Baju Batik L x1 = Rp150.000
+
+Mau tambah produk lain? (Ya/Tidak)</pre><div class="bubble-time">10:03</div></div>
+              <div class="wa-bubble user"><pre>tidak</pre><div class="bubble-time">10:04</div></div>
+              <div class="wa-bubble bot"><pre>📍 Kirim ke kota mana?
+(Ketik nama kota tujuan)</pre><div class="bubble-time">10:04</div></div>
+              <div class="wa-bubble user"><pre>Jakarta Selatan</pre><div class="bubble-time">10:05</div></div>
+              <div class="wa-bubble bot"><pre>Pilihan kurir ke Jakarta Selatan:
+
+1. JNE REG - Rp25.000 (2-3 hari)
+2. JNE YES - Rp98.000 (1 hari)
+3. J&T Express - Rp28.000 (2-3 hari)
+4. Ambil Sendiri - Gratis</pre><div class="bubble-time">10:05</div></div>
+              <div class="wa-bubble user"><pre>1</pre><div class="bubble-time">10:06</div></div>
+              <div class="wa-bubble bot"><pre>💳 Total Pembayaran:
+Produk: Rp150.000
+Ongkir JNE REG: Rp25.000
+──────────────
+Total: Rp175.000
+
+Silakan scan QRIS berikut (berlaku 15 menit):</pre><div class="bubble-time">10:06</div></div>
+              <div class="wa-bubble bot qris-bubble">
+                <div class="qris-mock">
+                  <span class="material-symbols-outlined" style="font-size:48px;color:#128C7E">qr_code_2</span>
+                  <span style="font-size:0.75rem;color:var(--color-text-secondary)">QRIS Midtrans</span>
+                </div>
+                <div class="bubble-time">10:06</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

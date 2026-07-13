@@ -1,0 +1,97 @@
+.customers-page { max-width: 1400px; }
+.page-header { margin-bottom: 20px; }
+
+.stats-row {
+  display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap;
+}
+
+.stat-card {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border-light);
+  flex: 1; min-width: 160px;
+}
+
+.stat-icon {
+  width: 44px; height: 44px; border-radius: var(--radius-md);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  .material-symbols-outlined { font-size: 24px; }
+}
+
+.stat-val { font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
+.stat-lbl { font-size: 0.8125rem; color: var(--color-text-secondary); margin-top: 2px; }
+
+// table stuff
+.table-header { display: flex; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--color-border-light); }
+.search-wrap { position: relative; flex: 1; max-width: 340px; }
+.search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 20px; color: var(--color-text-muted); pointer-events: none; }
+.search-input { width: 100%; padding: 9px 14px 9px 40px; border: 1.5px solid var(--color-border); border-radius: var(--radius-full); font-size: 0.875rem; outline: none; background: var(--color-bg); &:focus { border-color: var(--color-primary); } }
+
+.skeleton-rows { padding: 16px 20px; display: flex; flex-direction: column; gap: 16px; }
+.skeleton-row { display: flex; align-items: center; gap: 20px; }
+
+.empty-state-full { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 60px 20px; text-align: center; h3 { font-size: 1rem; font-weight: 600; } p { font-size: 0.875rem; color: var(--color-text-secondary); } }
+
+.wa-cell { display: flex; align-items: center; gap: 8px; font-size: 0.875rem; }
+.wa-icon { display: flex; align-items: center; flex-shrink: 0; opacity: 0.7; &:hover { opacity: 1; } }
+
+.order-count-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  background: var(--color-primary-faint);
+  color: var(--color-primary);
+  border-radius: var(--radius-full);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.icon-btn {
+  width: 32px; height: 32px; border: none; background: transparent;
+  border-radius: var(--radius-md); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  .material-symbols-outlined { font-size: 18px; }
+  &.edit { color: var(--color-primary); &:hover { background: var(--color-primary-faint); } }
+}
+
+// ── Customer detail ────────────────────────────────────────────
+.customer-detail { display: flex; flex-direction: column; gap: 16px; }
+
+.cust-meta {
+  display: flex; align-items: center; gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.cust-avatar {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+  color: #fff; font-size: 1.25rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.cust-name { font-size: 1rem; font-weight: 700; }
+.wa-link-detail { display: inline-flex; align-items: center; gap: 4px; color: #25D366; font-size: 0.875rem; text-decoration: none; &:hover { text-decoration: underline; } }
+
+.cust-stats { display: flex; gap: 24px; margin-left: auto; }
+.cs-item { display: flex; flex-direction: column; align-items: center; }
+.cs-val { font-size: 1.25rem; font-weight: 700; color: var(--color-text); }
+.cs-lbl { font-size: 0.75rem; color: var(--color-text-secondary); }
+
+.history-title { font-size: 0.9375rem; font-weight: 600; color: var(--color-text); }
+
+.history-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border-light);
+  &:last-child { border-bottom: none; }
+}
+
+.history-main { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.history-num { font-weight: 600; font-size: 0.875rem; color: var(--color-primary); }
+.history-date { font-size: 0.8125rem; color: var(--color-text-secondary); }
+.history-total { font-weight: 700; font-size: 0.9rem; white-space: nowrap; }
