@@ -12,7 +12,8 @@ interface Plan {
   price: number;
   quota: number;
   maxProducts: string;
-  color: string;
+  color: string;       // CSS variable or hex — used for text/border
+  colorHex: string;    // Raw hex — used only for alpha backgrounds (CSS vars can't do opacity concat)
   icon: string;
   features: string[];
   popular?: boolean;
@@ -40,6 +41,7 @@ export class SubscriptionComponent implements OnInit {
       quota: 200,
       maxProducts: '30 produk',
       color: '#6b7280',
+      colorHex: '#6b7280',
       icon: 'rocket_launch',
       features: [
         'Bot WhatsApp otomatis',
@@ -55,7 +57,8 @@ export class SubscriptionComponent implements OnInit {
       price: 249_000,
       quota: 600,
       maxProducts: '200 produk',
-      color: '#128C7E',
+      color: 'var(--color-primary)',
+      colorHex: '#128C7E',
       icon: 'trending_up',
       popular: true,
       features: [
@@ -73,6 +76,7 @@ export class SubscriptionComponent implements OnInit {
       quota: 1_500,
       maxProducts: 'Unlimited produk',
       color: '#7c3aed',
+      colorHex: '#7c3aed',
       icon: 'workspace_premium',
       features: [
         'Semua fitur Growth',
@@ -92,9 +96,9 @@ export class SubscriptionComponent implements OnInit {
 
   usageColor = computed(() => {
     const p = this.usagePercent();
-    if (p >= 90) return '#ef4444';
-    if (p >= 70) return '#f59e0b';
-    return '#128C7E';
+    if (p >= 90) return 'var(--color-danger)';
+    if (p >= 70) return 'var(--color-warning)';
+    return 'var(--color-primary)';
   });
 
   constructor(private http: HttpClient, private messageService: MessageService) {}

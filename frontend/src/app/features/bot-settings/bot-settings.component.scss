@@ -201,3 +201,10 @@
 
 .spinning { animation: spin 0.8s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+// ── Section icon color themes ──────────────────────────────────
+.section-icon-primary { background: #e6f4f2; color: var(--color-primary); }
+.section-icon-amber   { background: #fef3c7; color: #b45309; }
+.section-icon-danger  { background: #fee2e2; color: #991b1b; }
+.section-icon-violet  { background: #f3e8ff; color: #7c3aed; }
+.qr-preview-icon      { font-size: 48px !important; color: var(--color-primary); }

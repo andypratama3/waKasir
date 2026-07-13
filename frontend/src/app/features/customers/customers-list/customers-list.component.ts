@@ -2,6 +2,7 @@ import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CustomersService, CustomerSummary } from '../customers.service';
 import { RupiahPipe } from '../../../shared/pipes/rupiah.pipe';
+import { WhatsappIconComponent } from '../../../shared/components/whatsapp-icon/whatsapp-icon.component';
 import { TableModule } from 'primeng/table';
 import { SkeletonModule } from 'primeng/skeleton';
 import { DialogModule } from 'primeng/dialog';
@@ -9,7 +10,7 @@ import { TagModule } from 'primeng/tag';
 @Component({
   selector: 'app-customers-list',
   standalone: true,
-  imports: [CommonModule, RupiahPipe, TableModule, SkeletonModule, DialogModule, TagModule],
+  imports: [CommonModule, RupiahPipe, TableModule, SkeletonModule, DialogModule, TagModule, WhatsappIconComponent],
   templateUrl: './customers-list.component.html',
   styleUrl: './customers-list.component.scss',
 })

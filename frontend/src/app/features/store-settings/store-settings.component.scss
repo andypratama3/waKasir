@@ -213,3 +213,8 @@ label {
 
 .spinning { animation: spin 0.8s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+// ── Integration icon colors ────────────────────────────────────
+.icon-wa         { color: #25D366; }
+.icon-midtrans   { color: #0099cc; }
+.icon-rajaongkir { color: #e67e22; }

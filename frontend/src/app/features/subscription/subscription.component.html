@@ -16,8 +16,8 @@
   @if (!loading() && subscription()) {
     <div class="current-plan-card card">
       <div class="current-plan-header">
-        <div class="plan-icon-wrap" [style.background]="'rgba(18,140,126,0.1)'">
-          <span class="material-symbols-outlined filled" style="color:#128C7E">workspace_premium</span>
+        <div class="plan-icon-wrap plan-icon-active">
+          <span class="material-symbols-outlined filled icon-primary">workspace_premium</span>
         </div>
         <div class="plan-info">
           <div class="plan-label">Paket Aktif</div>
@@ -42,7 +42,7 @@
         <div class="usage-header">
           <div>
             <div class="usage-title">
-              <span class="material-symbols-outlined icon-sm">chat_bubble</span>
+              <span class="material-symbols-outlined icon-sm icon-primary">chat_bubble</span>
               Kuota Percakapan Bulan Ini
             </div>
             <div class="usage-numbers">
@@ -109,7 +109,7 @@
         }
 
         <div class="plan-header">
-          <div class="plan-icon" [style.background]="plan.color + '18'" [style.color]="plan.color">
+          <div class="plan-icon" [style.background]="plan.colorHex + '18'" [style.color]="plan.color">
             <span class="material-symbols-outlined filled">{{ plan.icon }}</span>
           </div>
           <div class="plan-name-lg" [style.color]="plan.color">{{ plan.name }}</div>
@@ -122,11 +122,11 @@
 
         <div class="plan-specs">
           <div class="spec-item">
-            <span class="material-symbols-outlined icon-sm" style="color:#128C7E">chat_bubble</span>
+            <span class="material-symbols-outlined icon-sm icon-primary">chat_bubble</span>
             ~{{ plan.quota | number }} percakapan
           </div>
           <div class="spec-item">
-            <span class="material-symbols-outlined icon-sm" style="color:#128C7E">inventory_2</span>
+            <span class="material-symbols-outlined icon-sm icon-primary">inventory_2</span>
             {{ plan.maxProducts }}
           </div>
         </div>
@@ -134,7 +134,7 @@
         <ul class="feature-list">
           @for (feat of plan.features; track feat) {
             <li>
-              <span class="material-symbols-outlined icon-sm" style="color:#22c55e">check_circle</span>
+              <span class="material-symbols-outlined icon-sm icon-success">check_circle</span>
               {{ feat }}
             </li>
           }
@@ -154,18 +154,16 @@
             <a
               href="https://wa.me/6281234567890?text=Halo,%20saya%20ingin%20upgrade%20ke%20paket%20Pro%20WaKasir"
               target="_blank"
-              class="btn w-full"
-              [style.background]="plan.color"
-              style="color:#fff;text-decoration:none;justify-content:center"
+              class="btn btn-pro-contact w-full"
+              [style.background]="plan.colorHex"
             >
               <span class="material-symbols-outlined">support_agent</span>
               Hubungi Kami
             </a>
           } @else {
             <button
-              class="btn w-full"
-              [style.background]="plan.color"
-              style="color:#fff"
+              class="btn btn-plan-upgrade w-full"
+              [style.background]="plan.colorHex"
               [disabled]="upgrading()"
               (click)="upgrade(plan.key)"
             >
@@ -188,13 +186,13 @@
     <div class="billing-header">
       <div>
         <h3 class="section-heading" style="font-size:1rem">
-          <span class="material-symbols-outlined icon-sm" style="color:#128C7E">receipt</span>
+          <span class="material-symbols-outlined icon-sm icon-primary">receipt</span>
           Riwayat Tagihan
         </h3>
       </div>
     </div>
     <div class="billing-empty">
-      <span class="material-symbols-outlined" style="font-size:40px;color:#d1d5db">receipt_long</span>
+      <span class="material-symbols-outlined empty-icon-muted">receipt_long</span>
       <p>Riwayat tagihan akan tersedia segera.</p>
       <span>Untuk pertanyaan tagihan, hubungi tim kami.</span>
     </div>

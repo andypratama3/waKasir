@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
 import { OrdersService } from '../orders.service';
 import { RupiahPipe } from '../../../shared/pipes/rupiah.pipe';
+import { WhatsappIconComponent } from '../../../shared/components/whatsapp-icon/whatsapp-icon.component';
 import { MessageService } from 'primeng/api';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -23,7 +24,7 @@ const STATUS_ORDER = ['pending','paid','processing','shipped','completed','cance
     CommonModule, ReactiveFormsModule, RupiahPipe,
     TableModule, ButtonModule, DialogModule, InputTextModule,
     TagModule, ToastModule, SkeletonModule,
-    TooltipModule, TimelineModule,
+    TooltipModule, TimelineModule, WhatsappIconComponent,
   ],
   providers: [MessageService],
   templateUrl: './orders-list.component.html',

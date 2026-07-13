@@ -1,96 +1,115 @@
-<div class="dashboard page-enter">
+<div class="dashboard">
 
-  <!-- Welcome Banner -->
-  <div class="welcome-banner">
-    <div class="welcome-text">
-      <p class="welcome-greeting">{{ greeting() }}</p>
-      <h2 class="welcome-name">{{ userName() }}</h2>
-      <p class="welcome-hint">Pantau omzet, pesanan, dan stok toko Anda dari satu tempat.</p>
+  <!-- ═══ HERO HEADER ═══════════════════════════════════════════ -->
+  <div class="hero-header">
+    <div class="hero-left">
+      <div class="hero-greeting">
+        <span class="material-symbols-outlined greeting-wave">waving_hand</span>
+        {{ greeting() }},
+      </div>
+      <h1 class="hero-name">{{ userName() }}</h1>
+      <p class="hero-date">
+        <span class="material-symbols-outlined">calendar_today</span>
+        {{ currentDate() }}
+      </p>
     </div>
-    <div class="welcome-actions">
-      <a routerLink="/products" class="btn btn-outline btn-sm">
-        <span class="material-symbols-outlined">inventory_2</span>
-        Kelola Produk
-      </a>
-      <a routerLink="/orders" class="btn btn-primary btn-sm">
+    <div class="hero-actions">
+      <a routerLink="/orders" class="hero-btn hero-btn-primary">
         <span class="material-symbols-outlined">receipt_long</span>
-        Lihat Pesanan
+        <span>Pesanan</span>
+        @if ((stats()?.orders_by_status?.pending ?? 0) > 0) {
+          <span class="action-badge">{{ stats()?.orders_by_status?.pending }}</span>
+        }
+      </a>
+      <a routerLink="/products" class="hero-btn hero-btn-ghost">
+        <span class="material-symbols-outlined">add_box</span>
+        <span>Produk</span>
       </a>
     </div>
   </div>
 
-  <!-- KPI Cards -->
+  <!-- ═══ KPI CARDS ══════════════════════════════════════════════ -->
   @if (loading()) {
     <div class="kpi-grid">
       @for (i of [1,2,3,4]; track i) {
-        <p-skeleton height="130px" borderRadius="16px" />
+        <div class="kpi-skeleton">
+          <p-skeleton height="100%" borderRadius="20px" />
+        </div>
       }
     </div>
   } @else {
-    <div class="kpi-grid stagger-children">
-      <div class="kpi-card kpi-revenue">
-        <div class="kpi-icon kpi-icon-revenue">
-          <span class="material-symbols-outlined">payments</span>
+    <div class="kpi-grid">
+      @for (card of kpiCards(); track card.id) {
+        <div class="kpi-card kpi-{{ card.color }}">
+          <div class="kpi-top">
+            <div class="kpi-icon-wrap">
+              <span class="material-symbols-outlined filled">{{ card.icon }}</span>
+            </div>
+            <div class="kpi-label">{{ card.label }}</div>
+          </div>
+          <div class="kpi-value">
+            @if (card.isRupiah) {
+              {{ card.value | rupiah:true }}
+            } @else {
+              {{ card.value | number }}
+            }
+          </div>
+          <div class="kpi-trend" [class.up]="card.trend.up" [class.neutral]="!card.trend.up">
+            <span class="material-symbols-outlined">{{ card.trend.icon }}</span>
+            <span>
+              @if (card.trend.isRupiah) {
+                {{ card.trend.label | rupiah:true }}
+              } @else {
+                {{ card.trend.label }}
+              }
+              {{ card.trend.suffix }}
+            </span>
+          </div>
+          <!-- Decorative blob -->
+          <div class="kpi-blob"></div>
         </div>
-        <div class="kpi-value">{{ stats()?.today?.revenue | rupiah:true }}</div>
-        <div class="kpi-label">Omzet Hari Ini</div>
-        <div class="kpi-trend up">
-          <span class="material-symbols-outlined icon-sm">trending_up</span>
-          {{ stats()?.week?.revenue | rupiah:true }} minggu ini
-        </div>
-      </div>
-
-      <div class="kpi-card kpi-orders">
-        <div class="kpi-icon kpi-icon-orders">
-          <span class="material-symbols-outlined">receipt_long</span>
-        </div>
-        <div class="kpi-value">{{ stats()?.today?.orders ?? 0 }}</div>
-        <div class="kpi-label">Order Hari Ini</div>
-        <div class="kpi-trend up">
-          <span class="material-symbols-outlined icon-sm">shopping_bag</span>
-          {{ stats()?.week?.orders ?? 0 }} minggu ini
-        </div>
-      </div>
-
-      <div class="kpi-card kpi-pending">
-        <div class="kpi-icon kpi-icon-pending">
-          <span class="material-symbols-outlined">pending_actions</span>
-        </div>
-        <div class="kpi-value">{{ stats()?.orders_by_status?.pending ?? 0 }}</div>
-        <div class="kpi-label">Menunggu Diproses</div>
-        <div class="kpi-trend" [class.up]="(stats()?.orders_by_status?.paid ?? 0) === 0" [class.down]="(stats()?.orders_by_status?.paid ?? 0) > 0">
-          <span class="material-symbols-outlined icon-sm">payments</span>
-          {{ stats()?.orders_by_status?.paid ?? 0 }} menunggu bayar
-        </div>
-      </div>
-
-      <div class="kpi-card kpi-customers">
-        <div class="kpi-icon kpi-icon-customers">
-          <span class="material-symbols-outlined">people</span>
-        </div>
-        <div class="kpi-value">{{ stats()?.overall?.total_customers ?? 0 }}</div>
-        <div class="kpi-label">Total Pelanggan</div>
-        <div class="kpi-trend neutral">
-          <span class="material-symbols-outlined icon-sm">inventory_2</span>
-          {{ stats()?.overall?.active_products ?? 0 }} produk aktif
-        </div>
-      </div>
+      }
     </div>
   }
 
-  <!-- Chart + Top Products row -->
-  <div class="chart-row">
-    <!-- Sales Chart -->
-    <div class="card chart-card">
-      <div class="chart-header">
-        <div>
-          <h3 class="section-title">Grafik Penjualan</h3>
-          <p class="section-subtitle">Total omzet dari order selesai</p>
+  <!-- ═══ ORDER STATUS FUNNEL ═════════════════════════════════════ -->
+  @if (!loading() && stats()) {
+    <div class="status-funnel-row">
+      @for (status of orderStatusSteps; track status) {
+        <div class="funnel-item">
+          <div class="funnel-count" [class.has-value]="orderStatusCount(status) > 0">
+            {{ orderStatusCount(status) }}
+          </div>
+          <div class="funnel-status-badge status-{{ status }}">
+            <span class="status-dot"></span>{{ status }}
+          </div>
         </div>
-        <div class="period-tabs">
+        @if (!$last) {
+          <div class="funnel-arrow">
+            <span class="material-symbols-outlined">chevron_right</span>
+          </div>
+        }
+      }
+    </div>
+  }
+
+  <!-- ═══ CHARTS ROW ══════════════════════════════════════════════ -->
+  <div class="charts-row">
+
+    <!-- Revenue Line Chart -->
+    <div class="chart-card glass-card">
+      <div class="chart-header">
+        <div class="chart-title-group">
+          <div class="chart-title">
+            <span class="material-symbols-outlined">show_chart</span>
+            Grafik Penjualan
+          </div>
+          <p class="chart-subtitle">Total omzet dari order selesai</p>
+        </div>
+        <div class="period-switcher">
           @for (p of periods; track p.value) {
             <button
-              class="period-btn"
+              class="period-pill"
               [class.active]="selectedPeriod() === p.value"
               (click)="loadChart(p.value)"
             >{{ p.label }}</button>
@@ -99,116 +118,158 @@
       </div>
 
       @if (chartLoading() || !chartData()) {
-        <p-skeleton height="240px" borderRadius="12px" />
+        <div class="chart-area-skeleton">
+          <p-skeleton height="100%" borderRadius="12px" />
+        </div>
       } @else {
-        <div class="chart-wrap">
-          <p-chart type="line" [data]="chartData()" [options]="chartOptions()" height="240px" />
+        <div class="chart-area">
+          <p-chart type="line" [data]="chartData()" [options]="lineOptions()" height="260px" />
         </div>
       }
     </div>
 
-    <!-- Top Products bar chart -->
-    <div class="card top-products-card">
-      <h3 class="section-title">Produk Terlaris</h3>
-      <p class="section-subtitle">Berdasarkan jumlah terjual</p>
+    <!-- Top Products Bar -->
+    <div class="bar-card glass-card">
+      <div class="chart-title-group" style="margin-bottom:18px">
+        <div class="chart-title">
+          <span class="material-symbols-outlined">bar_chart</span>
+          Produk Terlaris
+        </div>
+        <p class="chart-subtitle">Berdasarkan jumlah unit terjual</p>
+      </div>
+
       @if (!barChartData()) {
-        <p-skeleton height="240px" borderRadius="12px" />
+        <div class="chart-area-skeleton">
+          <p-skeleton height="100%" borderRadius="12px" />
+        </div>
       } @else {
-        <div class="chart-wrap">
-          <p-chart type="bar" [data]="barChartData()" [options]="barChartOptions()" height="240px" />
+        <div class="chart-area">
+          <p-chart type="bar" [data]="barChartData()" [options]="barOptions()" height="260px" />
         </div>
       }
     </div>
   </div>
 
-  <!-- Bottom row -->
+  <!-- ═══ BOTTOM ROW ══════════════════════════════════════════════ -->
   <div class="bottom-row">
 
-    <!-- Recent Orders -->
-    <div class="card orders-card">
-      <div class="card-header-row">
+    <!-- Recent Orders Table -->
+    <div class="orders-card glass-card">
+      <div class="section-head">
         <div>
-          <h3 class="section-title">Order Terbaru</h3>
-          <p class="section-subtitle">5 order paling baru</p>
+          <div class="section-title">
+            <span class="material-symbols-outlined">receipt_long</span>
+            Order Terbaru
+          </div>
+          <p class="section-sub">{{ recentOrders().length }} order terakhir</p>
         </div>
-        <a routerLink="/orders" class="see-all-link">
+        <a routerLink="/orders" class="view-all-btn">
           Lihat semua
-          <span class="material-symbols-outlined icon-sm">arrow_forward</span>
+          <span class="material-symbols-outlined">arrow_forward</span>
         </a>
       </div>
 
       @if (loading()) {
-        <p-skeleton height="220px" />
+        @for (i of [1,2,3,4,5]; track i) {
+          <div class="order-skeleton-row">
+            <p-skeleton height="14px" width="110px" borderRadius="6px" />
+            <p-skeleton height="14px" width="130px" borderRadius="6px" />
+            <p-skeleton height="14px" width="90px" borderRadius="6px" />
+            <p-skeleton height="22px" width="80px" borderRadius="20px" />
+          </div>
+        }
       } @else if (recentOrders().length === 0) {
-        <div class="empty-state">
-          <span class="material-symbols-outlined icon-xl">receipt_long</span>
+        <div class="empty-orders">
+          <div class="empty-icon-wrap">
+            <span class="material-symbols-outlined">receipt_long</span>
+          </div>
           <p>Belum ada order masuk</p>
+          <span>Order dari WhatsApp akan muncul di sini</span>
         </div>
       } @else {
-        <table class="mini-table">
-          <thead>
-            <tr>
-              <th>Order</th>
-              <th>Pelanggan</th>
-              <th>Total</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (order of recentOrders(); track order.id) {
-              <tr class="mini-table-row">
-                <td class="font-semibold order-num">#{{ order.order_number }}</td>
-                <td>{{ order.customer?.name ?? order.customer?.wa_number ?? '-' }}</td>
-                <td class="amount">{{ order.total_amount | rupiah }}</td>
-                <td><span [class]="getStatusClass(order.status)"><span class="status-dot"></span>{{ order.status }}</span></td>
-              </tr>
-            }
-          </tbody>
-        </table>
+        <div class="orders-list">
+          @for (order of recentOrders(); track order.id) {
+            <a routerLink="/orders" class="order-row">
+              <div class="order-row-left">
+                <div class="order-num-badge">#{{ order.order_number?.slice(-6) }}</div>
+                <div class="order-meta">
+                  <span class="order-customer">{{ order.customer?.name ?? order.customer?.wa_number ?? 'Pelanggan' }}</span>
+                  <span class="order-date">{{ order.created_at | date:'dd MMM, HH:mm' }}</span>
+                </div>
+              </div>
+              <div class="order-row-right">
+                <span class="order-amount">{{ order.total_amount | rupiah }}</span>
+                <span [class]="getStatusClass(order.status)">
+                  <span class="status-dot"></span>{{ order.status }}
+                </span>
+              </div>
+            </a>
+          }
+        </div>
       }
     </div>
 
-    <!-- Right: Low stock + Top cities -->
-    <div class="right-col">
+    <!-- Right column -->
+    <div class="side-col">
 
-      <!-- Low stock alert -->
-      <div class="card alert-card">
-        <div class="card-header-row">
-          <h3 class="section-title">
-            <span class="material-symbols-outlined icon-sm warning-icon">warning</span>
+      <!-- Low Stock -->
+      <div class="side-card glass-card">
+        <div class="section-head compact">
+          <div class="section-title warn">
+            <span class="material-symbols-outlined filled">warning</span>
             Stok Menipis
-          </h3>
-          <a routerLink="/products" class="see-all-link">Kelola</a>
+          </div>
+          <a routerLink="/products" class="view-all-btn">Kelola</a>
         </div>
-        @for (p of lowStock().slice(0,4); track p.id) {
-          <div class="low-stock-item">
-            <span class="product-name truncate">{{ p.name }}</span>
-            <span class="stock-badge" [class.critical]="p.stock <= 2">{{ p.stock }} pcs</span>
-          </div>
-        }
+
         @if (lowStock().length === 0) {
-          <p class="no-alert">Semua produk stok aman</p>
-        }
-      </div>
-
-      <!-- Top cities -->
-      <div class="card cities-card">
-        <h3 class="section-title">
-          <span class="material-symbols-outlined icon-sm city-icon">location_on</span>
-          Kota Terbanyak
-        </h3>
-        @for (c of topCities().slice(0,5); track c.city_name; let i = $index) {
-          <div class="city-item">
-            <span class="city-rank">{{ i + 1 }}</span>
-            <span class="city-name truncate">{{ c.city_name }}</span>
-            <span class="city-count">{{ c.order_count }} order</span>
+          <div class="side-empty">
+            <span class="material-symbols-outlined">check_circle</span>
+            Semua stok aman
           </div>
-        }
-        @if (topCities().length === 0) {
-          <p class="no-alert">Belum ada data</p>
+        } @else {
+          @for (p of lowStock().slice(0, 5); track p.id) {
+            <div class="stock-row">
+              <div class="stock-info">
+                <span class="material-symbols-outlined stock-icon" [class]="getStockLevel(p.stock)">inventory_2</span>
+                <span class="stock-name truncate">{{ p.name }}</span>
+              </div>
+              <div class="stock-pill" [class]="getStockLevel(p.stock)">
+                <span class="material-symbols-outlined">{{ p.stock === 0 ? 'close' : 'warning' }}</span>
+                {{ p.stock === 0 ? 'Habis' : p.stock + ' pcs' }}
+              </div>
+            </div>
+          }
         }
       </div>
-    </div>
 
+      <!-- Top Cities -->
+      <div class="side-card glass-card">
+        <div class="section-title" style="margin-bottom:14px">
+          <span class="material-symbols-outlined filled">location_city</span>
+          Kota Terbanyak
+        </div>
+
+        @if (topCities().length === 0) {
+          <div class="side-empty">
+            <span class="material-symbols-outlined">map</span>
+            Belum ada data
+          </div>
+        } @else {
+          @for (c of topCities().slice(0, 5); track c.city_name; let i = $index) {
+            <div class="city-row">
+              <div class="city-rank-badge" [attr.data-rank]="i + 1">{{ i + 1 }}</div>
+              <span class="city-name truncate">{{ c.city_name }}</span>
+              <div class="city-bar-wrap">
+                <div class="city-bar" [style.width.%]="(c.order_count / topCities()[0].order_count) * 100"></div>
+              </div>
+              <span class="city-count">{{ c.order_count }}</span>
+            </div>
+          }
+        }
+      </div>
+
+    </div>
   </div>
+
 </div>

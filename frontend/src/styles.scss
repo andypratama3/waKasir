@@ -207,32 +207,35 @@ body {
 }
 
 // ============================================================
-// Status Badges
+// Status Badges — refined
 // ============================================================
 .status-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 10px;
+  gap: 5px;
+  padding: 4px 10px;
   border-radius: var(--radius-full);
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: 0.71875rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
 
-  &.status-pending    { background: #fef3c7; color: #92400e; }
-  &.status-paid       { background: #dbeafe; color: #1e40af; }
-  &.status-processing { background: #cffafe; color: #155e75; }
-  &.status-shipped    { background: #ffedd5; color: #9a3412; }
-  &.status-completed  { background: #dcfce7; color: #166534; }
-  &.status-cancelled  { background: #fee2e2; color: #991b1b; }
-  &.status-refunded   { background: #f3e8ff; color: #6b21a8; }
+  &.status-pending    { background: #fef3c7; color: #92400e;  border: 1px solid rgba(253,230,138,0.6); }
+  &.status-paid       { background: #dbeafe; color: #1e40af;  border: 1px solid rgba(191,219,254,0.6); }
+  &.status-processing { background: #cffafe; color: #155e75;  border: 1px solid rgba(165,243,252,0.6); }
+  &.status-shipped    { background: #ffedd5; color: #9a3412;  border: 1px solid rgba(254,215,170,0.6); }
+  &.status-completed  { background: #dcfce7; color: #166534;  border: 1px solid rgba(187,247,208,0.6); }
+  &.status-cancelled  { background: #fee2e2; color: #991b1b;  border: 1px solid rgba(254,202,202,0.6); }
+  &.status-refunded   { background: #f3e8ff; color: #6b21a8;  border: 1px solid rgba(233,213,255,0.6); }
+  &.status-settlement { background: #dcfce7; color: #166534;  border: 1px solid rgba(187,247,208,0.6); }
 
   .status-dot {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
     background: currentColor;
+    flex-shrink: 0;
   }
 }
 
@@ -798,4 +801,10 @@ body {
 }
 @media (min-width: 769px) {
   .hide-desktop { display: none !important; }
+}
+
+// ── Global utility: empty state icon ─────────────────────────
+.empty-icon-muted {
+  font-size: 56px !important;
+  color: #d1d5db;
 }
