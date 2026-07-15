@@ -25,6 +25,15 @@
   }
   &::before { width: 400px; height: 400px; top: -120px; right: -80px; }
   &::after  { width: 300px; height: 300px; bottom: -80px; left: -60px; }
+
+  // Grid texture overlay
+  .grid-overlay {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+  }
 }
 
 .auth-left-content {
@@ -105,6 +114,18 @@
   padding: 40px 48px;
   background: var(--color-surface);
   overflow-y: auto;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--color-primary-light), transparent);
+    opacity: 0.3;
+  }
 }
 
 .auth-card {

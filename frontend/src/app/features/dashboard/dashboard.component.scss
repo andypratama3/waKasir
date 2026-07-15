@@ -54,6 +54,7 @@
     background: rgba(255,255,255,0.04);
     top: -170px; right: -120px;
     pointer-events: none;
+    z-index: 0;
   }
   &::after {
     content: '';
@@ -63,18 +64,19 @@
     background: rgba(255,255,255,0.05);
     bottom: -110px; left: 30px;
     pointer-events: none;
+    z-index: 0;
   }
-}
 
-// Subtle grid texture overlay
-.hero-header::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px);
-  background-size: 28px 28px;
-  pointer-events: none;
-  z-index: 0;
+  // Subtle grid texture overlay
+  .hero-grid-overlay {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px);
+    background-size: 28px 28px;
+    pointer-events: none;
+    z-index: 0;
+    border-radius: inherit;
+  }
 }
 
 .hero-left, .hero-actions {
