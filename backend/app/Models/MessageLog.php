@@ -10,6 +10,7 @@ class MessageLog extends Model
     protected $fillable = [
         'conversation_id',
         'business_id',
+        'wa_number',
         'direction',
         'content',
         'message_type',

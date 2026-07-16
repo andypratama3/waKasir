@@ -8,96 +8,158 @@ use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\BusinessController;
 use App\Http\Controllers\Api\SettingController;
+use App\Http\Controllers\Api\CustomerController;
+use App\Jobs\ProcessMidtransWebhook;
+use App\Jobs\ProcessIncomingWhatsAppMessage;
 
 /*
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
-|
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
+// ── Public auth routes ──────────────────────────────────────────────────
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
+Route::post('/login',    [AuthController::class, 'login'])->middleware('throttle:10,1');
 
-// Public routes
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
-
-// Protected routes
+// ── Protected routes ────────────────────────────────────────────────────
 Route::middleware('auth:sanctum')->group(function () {
-    // Auth routes
+
+    // Auth
     Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/me', [AuthController::class, 'me']);
+    Route::get('/me',      [AuthController::class, 'me']);
 
-    // Product routes
-    Route::apiResource('products', ProductController::class);
-    Route::get('/products/search', [ProductController::class, 'search']);
+    // Products — specific routes BEFORE apiResource to avoid route shadowing
+    Route::get('/products/search',              [ProductController::class, 'search']);
     Route::get('/products/category/{category}', [ProductController::class, 'byCategory']);
+    Route::apiResource('products', ProductController::class);
 
-    // Order routes
+    // Orders — specific routes BEFORE apiResource
+    Route::get('/orders/stats',          [OrderController::class, 'stats']);
     Route::apiResource('orders', OrderController::class)->except(['store', 'create']);
-    Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus']);
+    Route::post('/orders/{id}/status',   [OrderController::class, 'updateStatus']);
     Route::post('/orders/{id}/tracking', [OrderController::class, 'updateTracking']);
-    Route::post('/orders/{id}/cancel', [OrderController::class, 'cancel']);
-    Route::get('/orders/stats', [OrderController::class, 'stats']);
+    Route::post('/orders/{id}/cancel',   [OrderController::class, 'cancel']);
 
-    // Dashboard routes
-    Route::get('/dashboard', [DashboardController::class, 'index']);
-    Route::get('/dashboard/sales-chart', [DashboardController::class, 'salesChart']);
+    // Customers (dedicated endpoint)
+    Route::get('/customers',      [CustomerController::class, 'index']);
+    Route::get('/customers/{id}', [CustomerController::class, 'show']);
+
+    // Dashboard
+    Route::get('/dashboard',              [DashboardController::class, 'index']);
+    Route::get('/dashboard/sales-chart',  [DashboardController::class, 'salesChart']);
     Route::get('/dashboard/top-products', [DashboardController::class, 'topProducts']);
-    Route::get('/dashboard/top-cities', [DashboardController::class, 'topCities']);
+    Route::get('/dashboard/top-cities',   [DashboardController::class, 'topCities']);
 
-    // Business routes
-    Route::get('/business', [BusinessController::class, 'show']);
-    Route::put('/business', [BusinessController::class, 'update']);
-    Route::put('/business/integration/{integration}', [BusinessController::class, 'updateIntegration']);
-    Route::get('/business/stats', [BusinessController::class, 'stats']);
+    // Business
+    Route::get('/business',                               [BusinessController::class, 'show']);
+    Route::put('/business',                               [BusinessController::class, 'update']);
+    Route::put('/business/integration/{integration}',     [BusinessController::class, 'updateIntegration']);
+    Route::get('/business/stats',                         [BusinessController::class, 'stats']);
 
-    // Settings routes
-    Route::get('/settings/bot', [SettingController::class, 'botSettings']);
-    Route::put('/settings/bot', [SettingController::class, 'updateBotSettings']);
-    Route::get('/settings/subscription', [SettingController::class, 'subscription']);
-    Route::post('/settings/subscription/upgrade', [SettingController::class, 'upgradeSubscription']);
-    Route::get('/settings/categories', [SettingController::class, 'categories']);
-    Route::get('/settings/plans', [SettingController::class, 'plans']);
+    // WhatsApp BSP — Embedded Signup & status
+    Route::post('/business/whatsapp/connect',     [BusinessController::class, 'connectWhatsApp']);
+    Route::get('/business/whatsapp/status',       [BusinessController::class, 'waStatus']);
+    Route::delete('/business/whatsapp/disconnect',[BusinessController::class, 'disconnectWhatsApp']);
+
+    // Settings
+    Route::get('/settings/bot',                     [SettingController::class, 'botSettings']);
+    Route::put('/settings/bot',                     [SettingController::class, 'updateBotSettings']);
+    Route::get('/settings/subscription',            [SettingController::class, 'subscription']);
+    Route::post('/settings/subscription/upgrade',   [SettingController::class, 'upgradeSubscription']);
+    Route::get('/settings/categories',              [SettingController::class, 'categories']);
+    Route::get('/settings/plans',                   [SettingController::class, 'plans']);
 });
 
-// Webhook routes (no auth required)
-Route::post('/webhooks/midtrans', function (Request $request) {
-    $paymentService = app(\App\Domain\Payment\PaymentService::class);
-    $result = $paymentService->handleWebhook($request->all());
-    
-    if ($result) {
-        return response()->json(['status' => 'success']);
-    }
-    
-    return response()->json(['status' => 'error'], 400);
-});
+// ── Webhook routes (no auth, rate-limited) ───────────────────────────────
+Route::prefix('webhooks')->middleware('throttle:120,1')->group(function () {
 
-Route::post('/webhooks/whatsapp', function (Request $request) {
-    // WhatsApp webhook handler
-    $messageHandler = app(\App\Domain\Bot\MessageHandler::class);
-    
-    try {
-        $waNumber = $request->input('from') ?? $request->input('phone');
-        $message = $request->input('message') ?? $request->input('text');
-        $businessId = $request->input('business_id'); // In production, this would come from phone number lookup
-        
-        if ($waNumber && $message && $businessId) {
-            $response = $messageHandler->handle($message, $waNumber, $businessId);
-            
-            // Here you would send the response back via WhatsApp API
-            // For now, just return the response
-            return response()->json($response);
+    // ── Midtrans payment notification ────────────────────────────────────
+    Route::post('/midtrans', function (Request $request) {
+        $data = $request->all();
+
+        // Basic structural validation before queuing
+        if (empty($data['order_id']) || empty($data['transaction_status'])) {
+            return response()->json(['status' => 'error', 'message' => 'Invalid payload'], 400);
         }
-        
-        return response()->json(['status' => 'error', 'message' => 'Missing required fields'], 400);
-    } catch (\Exception $e) {
-        return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
-    }
+
+        // Dispatch async — respond immediately so Midtrans doesn't retry
+        dispatch(new ProcessMidtransWebhook($data));
+
+        return response()->json(['status' => 'ok']);
+    });
+
+    // ── WhatsApp Cloud API — GET challenge verification ───────────────────
+    Route::get('/whatsapp', function (Request $request) {
+        $mode      = $request->query('hub_mode');
+        $token     = $request->query('hub_verify_token');
+        $challenge = $request->query('hub_challenge');
+
+        $verifyToken = config('services.whatsapp.verify_token', '');
+
+        if ($mode === 'subscribe' && $token === $verifyToken) {
+            return response($challenge, 200)->header('Content-Type', 'text/plain');
+        }
+
+        return response()->json(['status' => 'forbidden'], 403);
+    });
+
+    // ── WhatsApp Cloud API — POST incoming messages ───────────────────────
+    Route::post('/whatsapp', function (Request $request) {
+        $body = $request->all();
+
+        // WhatsApp Cloud API wraps messages inside entry[].changes[]
+        $entry   = $body['entry'][0]    ?? null;
+        $changes = $entry['changes'][0] ?? null;
+        $value   = $changes['value']    ?? null;
+
+        if (!$value) {
+            // Could be a status update (delivery receipt) — just ack
+            return response()->json(['status' => 'ok']);
+        }
+
+        $phoneNumberId = $value['metadata']['phone_number_id'] ?? null;
+        $messages      = $value['messages'] ?? [];
+
+        if (empty($messages) || !$phoneNumberId) {
+            return response()->json(['status' => 'ok']);
+        }
+
+        // Resolve business from phone number ID
+        $business = \App\Models\Business::where('wa_phone_id', $phoneNumberId)->first();
+
+        if (!$business) {
+            \Illuminate\Support\Facades\Log::warning('WhatsApp webhook: unknown phone_number_id', [
+                'phone_number_id' => $phoneNumberId,
+            ]);
+            return response()->json(['status' => 'ok']); // still 200 to prevent Meta retries
+        }
+
+        foreach ($messages as $msg) {
+            $waNumber = $msg['from']             ?? null;
+            $type     = $msg['type']             ?? 'text';
+            $text     = $msg['text']['body']     ?? null;
+
+            // Handle interactive responses (button/list replies)
+            if ($type === 'interactive') {
+                $interactive = $msg['interactive'] ?? [];
+                $text = $interactive['button_reply']['title']
+                     ?? $interactive['list_reply']['title']
+                     ?? $text;
+            }
+
+            if (!$waNumber || !$text) {
+                continue;
+            }
+
+            dispatch(new ProcessIncomingWhatsAppMessage(
+                $waNumber,
+                $text,
+                $business->id,
+                ['message_id' => $msg['id'] ?? null, 'type' => $type]
+            ));
+        }
+
+        return response()->json(['status' => 'ok']);
+    });
 });

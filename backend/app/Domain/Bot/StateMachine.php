@@ -5,36 +5,38 @@ namespace App\Domain\Bot;
 class StateMachine
 {
     const STATES = [
-        'IDLE' => 'IDLE',
-        'BROWSING' => 'BROWSING',
-        'SELECTING_QTY' => 'SELECTING_QTY',
-        'CART_REVIEW' => 'CART_REVIEW',
-        'SELECTING_CITY' => 'SELECTING_CITY',
-        'SELECTING_COURIER' => 'SELECTING_COURIER',
-        'AWAITING_PAYMENT' => 'AWAITING_PAYMENT',
+        'IDLE'                  => 'IDLE',
+        'BROWSING'              => 'BROWSING',
+        'SELECTING_VARIANT'     => 'SELECTING_VARIANT',
+        'SELECTING_QTY'         => 'SELECTING_QTY',
+        'CART_REVIEW'           => 'CART_REVIEW',
+        'SELECTING_CITY'        => 'SELECTING_CITY',
+        'SELECTING_COURIER'     => 'SELECTING_COURIER',
+        'AWAITING_PAYMENT'      => 'AWAITING_PAYMENT',
         'PAID_AWAITING_ADDRESS' => 'PAID_AWAITING_ADDRESS',
-        'COMPLETED' => 'COMPLETED',
-        'EXPIRED' => 'EXPIRED',
-        'FALLBACK_CS' => 'FALLBACK_CS',
+        'COMPLETED'             => 'COMPLETED',
+        'EXPIRED'               => 'EXPIRED',
+        'FALLBACK_CS'           => 'FALLBACK_CS',
+    ];
+
+    private static array $transitions = [
+        'IDLE'                  => ['BROWSING', 'FALLBACK_CS'],
+        'BROWSING'              => ['SELECTING_VARIANT', 'SELECTING_QTY', 'CART_REVIEW', 'IDLE'],
+        'SELECTING_VARIANT'     => ['SELECTING_QTY', 'BROWSING'],
+        'SELECTING_QTY'         => ['CART_REVIEW', 'BROWSING'],
+        'CART_REVIEW'           => ['SELECTING_CITY', 'BROWSING', 'IDLE'],
+        'SELECTING_CITY'        => ['SELECTING_COURIER', 'SELECTING_CITY'],
+        'SELECTING_COURIER'     => ['AWAITING_PAYMENT', 'SELECTING_CITY'],
+        'AWAITING_PAYMENT'      => ['PAID_AWAITING_ADDRESS', 'EXPIRED', 'SELECTING_COURIER'],
+        'PAID_AWAITING_ADDRESS' => ['COMPLETED'],
+        'COMPLETED'             => ['IDLE'],
+        'EXPIRED'               => ['AWAITING_PAYMENT', 'IDLE'],
+        'FALLBACK_CS'           => ['IDLE'],
     ];
 
     public static function canTransition(string $from, string $to): bool
     {
-        $transitions = [
-            'IDLE' => ['BROWSING', 'FALLBACK_CS'],
-            'BROWSING' => ['SELECTING_QTY', 'CART_REVIEW', 'IDLE'],
-            'SELECTING_QTY' => ['CART_REVIEW', 'BROWSING'],
-            'CART_REVIEW' => ['SELECTING_CITY', 'BROWSING', 'IDLE'],
-            'SELECTING_CITY' => ['SELECTING_COURIER', 'SELECTING_CITY'],
-            'SELECTING_COURIER' => ['AWAITING_PAYMENT', 'SELECTING_CITY'],
-            'AWAITING_PAYMENT' => ['PAID_AWAITING_ADDRESS', 'EXPIRED', 'SELECTING_COURIER'],
-            'PAID_AWAITING_ADDRESS' => ['COMPLETED'],
-            'COMPLETED' => ['IDLE'],
-            'EXPIRED' => ['AWAITING_PAYMENT', 'IDLE'],
-            'FALLBACK_CS' => ['IDLE'],
-        ];
-
-        return in_array($to, $transitions[$from] ?? []);
+        return in_array($to, self::$transitions[$from] ?? [], true);
     }
 
     public static function getInitialState(): string
@@ -44,6 +46,11 @@ class StateMachine
 
     public static function isValidState(string $state): bool
     {
-        return in_array($state, self::STATES);
+        return array_key_exists($state, self::STATES);
+    }
+
+    public static function getAvailableTransitions(string $from): array
+    {
+        return self::$transitions[$from] ?? [];
     }
 }

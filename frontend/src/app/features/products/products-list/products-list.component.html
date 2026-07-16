@@ -63,7 +63,7 @@
     <!-- Empty state -->
     @else if (filtered().length === 0) {
       <div class="empty-state-full">
-        <span class="material-symbols-outlined" style="font-size:56px;color:#d1d5db">inventory_2</span>
+        <span class="material-symbols-outlined empty-icon-muted">inventory_2</span>
         <h3>Belum ada produk</h3>
         <p>Mulai tambahkan produk untuk ditampilkan di katalog bot</p>
         <button class="btn btn-primary" (click)="openAdd()">
@@ -103,7 +103,7 @@
                 @if (product.image_url) {
                   <img [src]="product.image_url" [alt]="product.name" />
                 } @else {
-                  <span class="material-symbols-outlined" style="color:#d1d5db;font-size:28px">image</span>
+                  <span class="material-symbols-outlined empty-icon-muted">image</span>
                 }
               </div>
             </td>
@@ -125,10 +125,10 @@
             <td>
               <span class="stock-val" [class.low]="product.stock <= 5">
                 @if (product.stock <= 5 && product.stock > 0) {
-                  <span class="material-symbols-outlined icon-sm" style="color:#f59e0b">warning</span>
+                  <span class="material-symbols-outlined icon-sm text-warning">warning</span>
                 }
                 @if (product.stock === 0) {
-                  <span class="material-symbols-outlined icon-sm" style="color:#ef4444">error</span>
+                  <span class="material-symbols-outlined icon-sm text-danger">error</span>
                 }
                 {{ product.stock }}
               </span>
@@ -194,8 +194,8 @@
           @if (imagePreview()) {
             <img [src]="imagePreview()!" alt="Preview" class="image-preview" />
           } @else {
-            <span class="material-symbols-outlined" style="font-size:40px;color:#d1d5db">add_photo_alternate</span>
-            <span style="font-size:0.8125rem;color:var(--color-text-secondary)">Klik untuk upload foto</span>
+            <span class="material-symbols-outlined empty-icon-muted">add_photo_alternate</span>
+            <span class="upload-hint">Klik untuk upload foto</span>
           }
         </label>
         <input id="img-upload" type="file" accept="image/*" hidden (change)="onFileChange($event)" />
@@ -257,7 +257,7 @@
       <!-- Status -->
       <div class="form-group status-row">
         <label>Status Produk</label>
-        <div class="status-toggle" style="margin-top:4px" (click)="form.patchValue({is_active: !form.value.is_active})">
+        <div class="status-toggle" (click)="form.patchValue({is_active: !form.value.is_active})">
           <div class="toggle-track" [class.on]="form.value.is_active">
             <div class="toggle-thumb"></div>
           </div>
@@ -277,13 +277,13 @@
         <div formArrayName="variants" class="variants-list">
           @for (v of variants.controls; track $index) {
             <div [formGroupName]="$index" class="variant-row">
-              <div class="form-group" style="flex:2">
+              <div class="form-group variant-flex-2">
                 <input type="text" formControlName="variant_name" placeholder="Nama varian (e.g. Ukuran: L)" />
               </div>
-              <div class="form-group" style="flex:1">
+              <div class="form-group variant-flex-1">
                 <input type="number" formControlName="stock_override" placeholder="Stok" />
               </div>
-              <div class="form-group" style="flex:1">
+              <div class="form-group variant-flex-1">
                 <input type="number" formControlName="price_override" placeholder="Harga override" />
               </div>
               <button type="button" class="icon-btn delete" (click)="removeVariant($index)">

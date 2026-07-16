@@ -9,12 +9,14 @@ use Illuminate\Support\Facades\DB;
 
 class ProductService
 {
-    public function getActiveProducts(string $businessId): \Illuminate\Database\Eloquent\Collection
+    public function getActiveProducts(string $businessId, int $perPage = 0): \Illuminate\Database\Eloquent\Collection|\Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
-        return Product::where('business_id', $businessId)
+        $query = Product::where('business_id', $businessId)
             ->where('is_active', true)
             ->where('stock', '>', 0)
-            ->get();
+            ->orderBy('name');
+
+        return $perPage > 0 ? $query->paginate($perPage) : $query->get();
     }
 
     public function getProductById(string $productId, string $businessId): ?Product

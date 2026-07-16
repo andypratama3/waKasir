@@ -74,12 +74,12 @@
             <th>Kurir</th>
             <th pSortableColumn="status">Status</th>
             <th pSortableColumn="created_at">Tanggal</th>
-            <th style="width:60px">Aksi</th>
+            <th class="action-col">Aksi</th>
           </tr>
         </ng-template>
 
         <ng-template pTemplate="body" let-order>
-          <tr class="order-row" (click)="openDetail(order)" style="cursor:pointer">
+          <tr class="order-row clickable-row" (click)="openDetail(order)">
             <td>
               <span class="order-number">#{{ order.order_number }}</span>
             </td>
@@ -134,7 +134,7 @@
           <div class="detail-order-num">#{{ selectedOrder().order_number }}</div>
           <div class="detail-date">{{ selectedOrder().created_at | date:'dd MMMM yyyy, HH:mm' }}</div>
         </div>
-        <span [class]="getStatusClass(selectedOrder().status)" style="font-size:0.875rem; padding:6px 14px">
+        <span [class]="getStatusClass(selectedOrder().status)" class="status-badge-md">
           <span class="status-dot"></span>
           {{ selectedOrder().status }}
         </span>
@@ -285,7 +285,7 @@
             }
 
             @if (canCancel(selectedOrder().status)) {
-              <button class="btn btn-danger w-full" style="margin-top:8px" [disabled]="savingStatus()" (click)="updateStatus('cancelled')">
+              <button class="btn btn-danger w-full btn-danger-spaced" [disabled]="savingStatus()" (click)="updateStatus('cancelled')">
                 <span class="material-symbols-outlined">cancel</span>
                 Batalkan Order
               </button>

@@ -15,13 +15,15 @@ class Conversation extends Model
         'selected_city_id',
         'selected_city_name',
         'selected_courier',
+        'fallback_count',
         'last_activity_at',
     ];
 
     protected $casts = [
-        'cart_data' => 'array',
+        'cart_data'        => 'array',
         'selected_courier' => 'array',
         'last_activity_at' => 'datetime',
+        'fallback_count'   => 'integer',
     ];
 
     public function customer(): BelongsTo

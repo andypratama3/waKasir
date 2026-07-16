@@ -89,12 +89,12 @@
             <th pSortableColumn="total_orders">Total Order</th>
             <th pSortableColumn="total_spent">Total Belanja</th>
             <th pSortableColumn="last_order_at">Terakhir Transaksi</th>
-            <th style="width:80px">Aksi</th>
+            <th class="action-col">Aksi</th>
           </tr>
         </ng-template>
 
         <ng-template pTemplate="body" let-c>
-          <tr class="customer-row" (click)="openCustomer(c)" style="cursor:pointer">
+          <tr class="customer-row clickable-row" (click)="openCustomer(c)">
             <td>
               <div class="wa-cell">
                 <a [href]="waLink(c.wa_number)" target="_blank" class="wa-icon" (click)="$event.stopPropagation()" title="Chat di WhatsApp">
@@ -153,7 +153,7 @@
             <span class="history-date">{{ order.created_at | date:'dd MMM yyyy' }}</span>
           </div>
           <span class="history-total">{{ order.total_amount | rupiah }}</span>
-          <span [class]="getStatusClass(order.status)" style="font-size:0.7rem"><span class="status-dot"></span>{{ order.status }}</span>
+          <span [class]="getStatusClass(order.status)" class="status-badge-sm"><span class="status-dot"></span>{{ order.status }}</span>
         </div>
       }
     </div>

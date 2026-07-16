@@ -18,5 +18,28 @@
 </head>
 <body>
   <app-root></app-root>
+
+  <!--
+    Facebook JS SDK — dibutuhkan untuk Embedded Signup (Hubungkan WhatsApp).
+    SDK ini dimuat async, tidak memblokir render halaman.
+    Dokumentasi: https://developers.facebook.com/docs/javascript/quickstart
+  -->
+  <script>
+    window.fbAsyncInit = function() {
+      FB.init({
+        appId   : '%%META_APP_ID%%',  // diganti saat build via angular.json fileReplacements
+        cookie  : true,
+        xfbml   : true,
+        version : 'v18.0'
+      });
+    };
+    (function(d, s, id) {
+      var js, fjs = d.getElementsByTagName(s)[0];
+      if (d.getElementById(id)) { return; }
+      js = d.createElement(s); js.id = id;
+      js.src = 'https://connect.facebook.net/id_ID/sdk.js';
+      fjs.parentNode.insertBefore(js, fjs);
+    }(document, 'script', 'facebook-jssdk'));
+  </script>
 </body>
 </html>

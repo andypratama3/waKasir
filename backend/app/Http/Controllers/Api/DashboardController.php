@@ -41,7 +41,7 @@ class DashboardController extends Controller
             ->whereDate('created_at', today())
             ->get();
 
-        $todayRevenue = $todayOrders->where('status', 'completed')->sum('total_amount');
+        $todayRevenue = $todayOrders->whereIn('status', ['paid', 'completed'])->sum('total_amount');
         $todayOrderCount = $todayOrders->count();
 
         // Calculate weekly stats
@@ -50,7 +50,7 @@ class DashboardController extends Controller
             ->where('created_at', '>=', $weekAgo)
             ->get();
 
-        $weeklyRevenue = $weeklyOrders->where('status', 'completed')->sum('total_amount');
+        $weeklyRevenue = $weeklyOrders->whereIn('status', ['paid', 'completed'])->sum('total_amount');
 
         // Get recent orders
         $recentOrders = $this->orderService->getOrdersByBusiness($businessId, ['limit' => 5]);

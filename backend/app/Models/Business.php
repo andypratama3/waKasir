@@ -15,6 +15,10 @@ class Business extends Model
         'name',
         'wa_phone_id',
         'wa_phone_number',
+        'wa_access_token',
+        'wa_waba_id',
+        'wa_token_expires_at',
+        'wa_connected',
         'midtrans_server_key',
         'midtrans_client_key',
         'midtrans_merchant_id',
@@ -29,11 +33,31 @@ class Business extends Model
         'operating_hours',
     ];
 
-    protected $casts = [
-        'bot_settings' => 'array',
-        'operating_hours' => 'array',
-        'subscription_ends_at' => 'datetime',
+    protected $hidden = [
+        'wa_access_token',       // never leak tokens in API responses
+        'midtrans_server_key',
+        'midtrans_client_key',
+        'rajaongkir_api_key',
     ];
+
+    protected $casts = [
+        'bot_settings'        => 'array',
+        'operating_hours'     => 'array',
+        'subscription_ends_at'=> 'datetime',
+        'wa_token_expires_at' => 'datetime',
+        'wa_connected'        => 'boolean',
+    ];
+
+    /** Returns the decrypted access token, or null if not set. */
+    public function getWaAccessTokenDecrypted(): ?string
+    {
+        if (!$this->wa_access_token) return null;
+        try {
+            return decrypt($this->wa_access_token);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
 
     public function users(): HasMany
     {

@@ -83,10 +83,43 @@
         </a>
 
         <!-- Notification bell -->
-        <button class="topbar-icon-btn" title="Notifikasi">
+        <button class="topbar-icon-btn" (click)="toggleNotifications()" title="Notifikasi">
           <span class="material-symbols-outlined">notifications</span>
-          <span class="notif-dot"></span>
+          @if (notificationCount() > 0) {
+            <span class="notif-badge">{{ notificationCount() }}</span>
+          }
         </button>
+
+        <!-- Notification dropdown -->
+        @if (notificationsOpen()) {
+          <div class="notification-dropdown">
+            <div class="notification-header">
+              <h3>Notifikasi</h3>
+              <button class="mark-read-btn" (click)="markAllAsRead()">Tandai semua dibaca</button>
+            </div>
+            <div class="notification-list">
+              @if (notifications().length === 0) {
+                <div class="notification-empty">
+                  <span class="material-symbols-outlined">notifications_none</span>
+                  <p>Tidak ada notifikasi</p>
+                </div>
+              } @else {
+                @for (notif of notifications(); track notif.id) {
+                  <div class="notification-item" [class.unread]="!notif.read">
+                    <div class="notif-icon">
+                      <span class="material-symbols-outlined">{{ notif.icon }}</span>
+                    </div>
+                    <div class="notif-content">
+                      <p class="notif-title">{{ notif.title }}</p>
+                      <p class="notif-message">{{ notif.message }}</p>
+                      <span class="notif-time">{{ notif.time }}</span>
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+          </div>
+        }
 
         <!-- User menu -->
         <div class="user-menu-wrap">

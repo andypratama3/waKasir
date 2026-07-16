@@ -67,6 +67,12 @@ export const routes: Routes = [
           import('./features/subscription/subscription.component').then(m => m.SubscriptionComponent),
         title: 'Langganan — WaKasir',
       },
+      {
+        path: 'reports',
+        loadComponent: () =>
+          import('./features/reports/reports.component').then(m => m.ReportsComponent),
+        title: 'Laporan — WaKasir',
+      },
     ],
   },
 

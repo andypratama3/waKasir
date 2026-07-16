@@ -1,476 +1,638 @@
 # WaKasir — WhatsApp Commerce Bot SaaS
 ## Dokumen Produk Lengkap (Master Spec)
-*Disusun 12 Juli 2026 — versi 2.0 (menggabungkan seluruh riset & revisi sebelumnya)*
+*Disusun 12 Juli 2026 — versi 3.0 (update arsitektur BSP WhatsApp: 15 Juli 2026)*
 
 ---
 
 ## Daftar Isi
 1. Ringkasan Produk & Posisi Pasar
-2. Alur Lengkap Pelanggan (Sudah Direvisi: Ongkir Sebelum Bayar)
-3. Alur Pemilik Toko
-4. Arsitektur Teknis
-5. Tech Stack Laravel — Detail Lengkap
-6. State Machine Bot
-7. Skema Database
-8. Dashboard Owner — Spesifikasi Lengkap per Halaman
-9. Katalog Masalah & Solusi (Edge Cases)
-10. Fitur MVP vs V2
-11. Model Bisnis & Harga
-12. Rencana Eksekusi 8 Minggu
-13. Risiko & Mitigasi
-14. Strategi Promosi
-15. Langkah Selanjutnya
+2. Alur Lengkap Pelanggan (Ongkir Sebelum Bayar)
+3. Alur Pemilik Toko (termasuk onboarding BSP)
+4. Arsitektur Teknis Sistem
+5. Arsitektur WhatsApp — Model BSP Multi-Tenant *(keputusan 15 Juli 2026)*
+6. Tech Stack — Detail Lengkap
+7. State Machine Bot
+8. Skema Database
+9. Dashboard Owner — Spesifikasi per Halaman
+10. Katalog Masalah & Solusi (Edge Cases)
+11. Fitur MVP vs V2
+12. Model Bisnis & Harga
+13. Rencana Eksekusi 8 Minggu
+14. Risiko & Mitigasi
+15. Strategi Promosi
 
 ---
-
 ## 1. Ringkasan Produk & Posisi Pasar
 
-**WaKasir** adalah SaaS multi-tenant yang menghubungkan nomor WhatsApp Business milik toko/UKM ke satu bot otomatis yang bisa: menjawab pertanyaan, menampilkan katalog, memproses pesanan sampai selesai, menghitung ongkir otomatis, generate QRIS pembayaran via Midtrans, konfirmasi pembayaran otomatis, dan meminta alamat pengiriman — semuanya tanpa admin toko perlu balas chat manual.
+**WaKasir** adalah SaaS multi-tenant yang menghubungkan nomor WhatsApp Business milik toko/UKM ke satu bot otomatis yang bisa: menampilkan katalog, memproses pesanan, menghitung ongkir otomatis, generate QRIS via Midtrans, konfirmasi pembayaran otomatis, dan meminta alamat pengiriman — tanpa admin toko perlu balas chat manual.
 
-**Kenapa ini celah pasar yang valid:** solusi WA API di Indonesia saat ini terbagi dua kutub — chatbot AI generik murah (Rp25rb–150rb/bulan) yang fokus jawab pertanyaan tapi tidak generate pembayaran+ongkir otomatis, atau platform omnichannel lengkap (Rp500rb–2,5jt/bulan) yang terlalu kompleks dan mahal untuk toko kecil. Belum ada yang fokus spesifik pada alur "chat → pilih produk → hitung ongkir → bayar QRIS → kirim" dalam satu paket harga UKM.
+**Celah pasar:** solusi WA API di Indonesia terbagi dua kutub — chatbot AI generik murah (Rp25rb–150rb/bln) yang tidak bisa generate pembayaran+ongkir otomatis, atau platform omnichannel (Rp500rb–2,5jt/bln) yang terlalu mahal untuk UKM. Belum ada yang fokus pada alur "chat → pilih produk → hitung ongkir → bayar QRIS → kirim" dalam satu paket harga UKM.
 
-**Modal utama Anda:** sistem ini adalah gabungan dari 2 hal yang sudah pernah Anda bangun di produksi — integrasi Midtrans (VA/QRIS generation, webhook status) di sistem sekolah & tiketing, dan integrasi WhatsApp Cloud API (kirim pesan, webhook, notifikasi otomatis) di sistem sekolah. Ini bukan riset teknologi baru, tapi rekombinasi dari yang sudah teruji.
+**Keunggulan teknis:** rekombinasi dari yang sudah teruji — integrasi Midtrans QRIS (produksi di sistem sekolah & tiketing) + WhatsApp Cloud API (produksi di sistem sekolah).
 
 ---
 
-## 2. Alur Lengkap Pelanggan (Sudah Direvisi: Ongkir Sebelum Bayar)
+## 2. Alur Lengkap Pelanggan
 
-> **Catatan penting:** versi awal alur ini menanyakan alamat SETELAH bayar. Itu keliru — ongkir berbeda tiap kota, jadi kota tujuan harus diketahui SEBELUM QR digenerate supaya total tagihan benar. Alur di bawah ini sudah diperbaiki.
+> Kota tujuan ditanyakan **sebelum** generate QR supaya ongkir sudah masuk ke total tagihan.
 
 ```
 1. SAPA & DETEKSI INTENT
    Pelanggan chat → Bot: "Halo! Selamat datang di [Nama Toko] 👋
-   1️⃣ Lihat Katalog  2️⃣ Tanya Produk  3️⃣ Cek Status Pesanan"
+   1️⃣ Lihat Katalog  2️⃣ Cek Status Pesanan  3️⃣ Hubungi Admin"
 
-2. TAMPILKAN KATALOG (WhatsApp Interactive List)
-   Bot ambil data dari database produk toko → kirim sebagai list/carousel
+2. TAMPILKAN KATALOG
+   Bot ambil produk aktif dari DB → kirim daftar bernomor
 
-3. PILIH PRODUK + JUMLAH (+ VARIAN jika ada)
-   "Baju Batik Lengan Panjang - Rp150.000. Mau berapa pcs? Ukuran?"
+3. PILIH PRODUK + VARIAN (jika ada) + JUMLAH
+   "Baju Batik - Rp150.000. Pilih ukuran: 1.S 2.M 3.L"
+   "Mau berapa pcs?"
 
 4. RINGKASAN KERANJANG
-   "Baju Batik x2 = Rp300.000. Tambah produk lain? (Ya/Tidak)"
+   "Baju Batik M x2 = Rp300.000. Tambah produk lain? (ya/tidak)"
 
-5. TANYA KOTA/KECAMATAN TUJUAN (BARU — sebelum bayar)
+5. TANYA KOTA TUJUAN (sebelum bayar)
    Bot: "Kirim ke kota mana?"
-   Pelanggan ketik sebagian nama → bot cocokkan dari cache data kota (autocomplete)
-   → konfirmasi kota yang benar (hindari typo "Jkt" vs "Jakarta")
+   Autocomplete dari cache kota → konfirmasi jika ada beberapa pilihan
 
-6. HITUNG ONGKIR OTOMATIS (Panggil API RajaOngkir)
+6. HITUNG ONGKIR OTOMATIS (RajaOngkir)
    Bot: "Pilihan pengiriman:
-        1. JNE Reguler - Rp25.000 (2-3 hari)
+        1. JNE REG - Rp25.000 (2-3 hari)
         2. JNE YES - Rp98.000 (1 hari)
-        3. Ambil Sendiri di Toko - Gratis"
-   Pelanggan pilih salah satu
+        3. Ambil Sendiri - Gratis"
 
-7. TOTAL FINAL = Harga Produk + Ongkir
-   Bot: "Total: Rp325.000 (produk Rp300.000 + ongkir Rp25.000)
-        Lanjut ke pembayaran?"
+7. TOTAL FINAL = Produk + Ongkir
+   "Total: Rp325.000. Lanjut bayar?"
 
-8. GENERATE QRIS OTOMATIS (Midtrans Core API, charge type QRIS)
-   Bot kirim gambar QR + Order ID + timer 15 menit
+8. GENERATE QRIS OTOMATIS (Midtrans Core API)
+   Bot kirim QR Code + Order ID + countdown 15 menit
 
-9. PELANGGAN BAYAR (lewat e-wallet/mbanking apapun via QRIS)
+9. PELANGGAN BAYAR via QRIS (e-wallet/m-banking apapun)
 
-10. WEBHOOK MIDTRANS "settlement" MASUK KE SERVER
-    Server update status → trigger bot kirim konfirmasi otomatis
-    Bot: "✅ Pembayaran diterima! Sekarang kirim alamat lengkap
-         (nama jalan, RT/RW, patokan) untuk pengiriman:"
+10. WEBHOOK MIDTRANS settlement → konfirmasi otomatis
+    "✅ Bayar diterima! Kirim alamat lengkap (jalan, RT/RW, patokan):"
 
 11. PELANGGAN KIRIM ALAMAT DETAIL
-    (Kota sudah didapat di step 5 — ini tinggal detail jalan/rumah)
-    Bot: "Alamat diterima. Order #1234 sedang diproses."
+    "Alamat diterima. Order #ORD-xxx sedang diproses."
 
-12. NOTIFIKASI KE OWNER (dashboard + opsional WA terpisah)
-    "🔔 Order baru #1234 - Rp325.000 - LUNAS
-     Kirim ke: [alamat] via JNE Reguler"
+12. NOTIFIKASI OWNER (WA + dashboard)
+    "🔔 Order #ORD-xxx Rp325.000 LUNAS — via JNE REG ke [kota]"
 
-13. (OPSIONAL) BOT KIRIM UPDATE RESI saat owner input nomor resi di dashboard
+13. UPDATE RESI (opsional, dipicu owner di dashboard)
+    Bot otomatis kirim notif resi ke pelanggan
 ```
 
 ---
-
 ## 3. Alur Pemilik Toko
 
 ```
-1. ONBOARDING
-   Sign up → pilih paket → connect nomor WhatsApp Business (Embedded Signup)
-   → connect akun Midtrans sendiri (Server Key/Client Key) → connect API key RajaOngkir
-   → input alamat asal toko (untuk hitung ongkir)
+1. ONBOARDING — Model BSP (client TIDAK perlu sentuh Meta Developer)
+   Daftar di WaKasir → pilih paket
+   → Klik "Hubungkan WhatsApp" di dashboard
+   → Popup Facebook Embedded Signup muncul (dihost oleh Meta, dipicu dari WaKasir)
+   → Client login Facebook mereka → pilih/buat nomor WA Business
+   → Meta kirim authorization_code ke backend WaKasir
+   → WaKasir exchange code → dapat System User Token + phone_number_id + waba_id
+   → Token disimpan terenkripsi di DB; client tidak perlu tahu detail teknis apapun
 
-2. SETUP KATALOG
-   Upload produk: nama, harga, stok, foto, kategori, BERAT (gram — wajib untuk ongkir)
+2. SETUP INTEGRASI (client isi sendiri di dashboard)
+   → Midtrans: Server Key + Client Key (dari dashboard Midtrans milik client)
+   → RajaOngkir: API Key (dari akun rajaongkir.com milik client)
+   → Alamat asal toko (kota untuk hitung ongkir)
 
-3. KUSTOMISASI BOT
-   Atur pesan sapaan, jam operasional, template konfirmasi
+3. SETUP KATALOG
+   Upload produk: nama, harga, stok, foto, kategori, BERAT GRAM (wajib)
 
-4. PANTAU ORDER via Dashboard (detail di Bagian 8)
+4. KUSTOMISASI BOT
+   Pesan sapaan, jam operasional, template notifikasi
 
-5. INPUT RESI saat barang dikirim → bot otomatis notif ke pelanggan
+5. OPERASIONAL HARIAN
+   Pantau order di dashboard → input resi → bot notif pelanggan otomatis
 ```
 
 ---
 
-## 4. Arsitektur Teknis
+## 4. Arsitektur Teknis Sistem
 
 ```
-┌─────────────┐   Webhook Pesan Masuk    ┌────────────────────────┐
-│  Meta WA     │ ───────────────────────▶│  Laravel Backend        │
-│  Cloud API   │◀─────────────────────── │  (API + Bot Engine)     │
-└─────────────┘   Kirim Balasan Pesan    └───────────┬─────────────┘
-                                                       │
-                        ┌──────────────────────────────┼──────────────────────────┐
-                        ▼                              ▼                          ▼
-                ┌───────────────┐            ┌──────────────────┐        ┌───────────────┐
-                │ MySQL/Postgres│            │  Midtrans Core API│        │  RajaOngkir    │
-                │ (tenant, produk│            │  (QRIS charge,    │        │  API (ongkir,  │
-                │  order, dst)   │            │  webhook status)  │        │  kota, kurir)  │
-                └───────────────┘            └──────────────────┘        └───────────────┘
-                        ▲
-                        │
-                ┌───────┴────────┐         ┌──────────────────────┐
-                │ Redis           │         │ Laravel REST API      │
-                │ (session bot,   │◀───────▶│ (Sanctum auth)        │
-                │  cart, cache    │         └──────────┬────────────┘
-                │  kota)          │                    │
-                └────────────────┘                    ▼
-                        ▲                    ┌──────────────────────┐
-                        │                    │ Angular Admin          │
-                ┌───────┴────────┐           │ Dashboard (SPA, owner) │
-                │ Laravel Queue/  │           └──────────────────────┘
-                │ Horizon (proses │
-                │ webhook async)  │
-                └────────────────┘
+┌──────────────────┐  Webhook masuk   ┌──────────────────────────┐
+│  Meta WhatsApp    │ ───────────────▶ │  Laravel Backend          │
+│  Cloud API        │ ◀─────────────── │  (REST API + Bot Engine)  │
+└──────────────────┘  Kirim pesan     └────────────┬─────────────┘
+                                                    │
+              ┌─────────────────────────────────────┼──────────────────────┐
+              ▼                                     ▼                      ▼
+   ┌─────────────────┐                  ┌────────────────────┐  ┌─────────────────┐
+   │ MySQL/PostgreSQL │                  │  Midtrans Core API  │  │  RajaOngkir API │
+   │ (multi-tenant)   │                  │  (QRIS + webhook)   │  │  (ongkir+kota)  │
+   └─────────────────┘                  └────────────────────┘  └─────────────────┘
+              ▲
+   ┌──────────┴──────────┐    ┌────────────────────────────────┐
+   │ Redis                │    │ Laravel REST API (Sanctum)      │
+   │ (cart, session bot,  │◀──▶│ → dikonsumsi Angular SPA        │
+   │  cache kota)         │    └───────────────┬────────────────┘
+   └─────────────────────┘                    ▼
+   ┌─────────────────────┐          ┌──────────────────────────┐
+   │ Laravel Queue        │          │ Angular Admin Dashboard   │
+   │ + Horizon            │          │ (SPA, owner per toko)     │
+   │ (async webhook jobs) │          └──────────────────────────┘
+   └─────────────────────┘
 ```
 
-**Prinsip desain penting:**
-- **Webhook harus jawab cepat** (Meta & Midtrans butuh respons cepat, biasanya <5 detik) → webhook controller cukup validasi + push ke queue job, proses berat (update DB, kirim pesan balasan) dikerjakan job di background via Laravel Horizon.
-- **Session percakapan disimpan di Redis**, bukan database utama — supaya cepat diakses dan bisa expire otomatis (TTL) tanpa perlu cron pembersihan manual.
-- **Data kota/provinsi/kecamatan dari RajaOngkir di-cache** di database lokal (bukan panggil API tiap kali pelanggan ketik nama kota) — RajaOngkir sendiri mengizinkan cache untuk data ini, sementara endpoint cek ongkir/tracking resi harus selalu request langsung karena datanya real-time.
-- **Dashboard Angular terpisah dari backend** — komunikasi murni lewat REST API (Laravel Sanctum untuk autentikasi token-based SPA). Ini beda dari pendekatan admin-panel-jadi-satu seperti Filament; Anda perlu membangun API Controller + API Resource untuk tiap entitas (produk, order, dst) yang dikonsumsi Angular.
+**Prinsip desain:**
+- Webhook jawab < 1 detik (validasi + push ke Queue) — proses berat di Job async
+- Session bot per `(business_id, wa_number)` di Redis — isolasi antar tenant & pelanggan
+- Data kota RajaOngkir di-cache di DB lokal (diizinkan Meta) — hanya ongkir & resi yang real-time
+- Dashboard Angular pure SPA, komunikasi lewat REST API (Sanctum token)
+
+---
+## 5. Arsitektur WhatsApp — Model BSP Multi-Tenant
+*Keputusan teknis final: 15 Juli 2026*
+
+### Konsep Inti
+
+WaKasir adalah **penyedia layanan**, bukan pengguna WA API biasa. Kamu punya **1 Meta App** saja untuk semua client. Setiap client yang onboarding menghubungkan nomor WA **mereka sendiri** ke Meta App milikmu via Embedded Signup — tanpa perlu buat akun Meta Developer sama sekali.
+
+Model ini identik dengan yang dipakai Wati, Zoko, Respond.io. Istilah resmi Meta: **Cloud API Solution Provider**.
 
 ---
 
-## 5. Tech Stack Laravel — Detail Lengkap
+### Struktur di Meta
 
-### Core Framework
-- **Laravel 12** (PHP 8.3) — sudah Anda kuasai penuh
-- **Laravel Sanctum** — autentikasi API (untuk dashboard SPA jika dipisah dari admin panel)
-- **Laravel Horizon** — monitoring & manajemen queue (krusial karena webhook harus diproses async)
-- **Laravel Queue (Redis driver)** — job untuk kirim pesan WA, proses webhook, generate laporan
+```
+developers.facebook.com
+└── Meta App: "WaKasir" (1 app, milik kamu selamanya)
+    └── WhatsApp Business Platform
+        ├── WABA: Toko A → phone_number_id: 111xxx → +62812xxxxxxx
+        ├── WABA: Toko B → phone_number_id: 222xxx → +62813xxxxxxx
+        ├── WABA: Toko C → phone_number_id: 333xxx → +62814xxxxxxx
+        └── ... (tidak terbatas)
+```
 
-### Admin Dashboard (Owner)
-**Stack: Angular (SPA) + Laravel REST API terpisah** — backend dan frontend jadi 2 project independen, komunikasi murni via API.
+Satu webhook URL untuk semua client:
+```
+POST https://api.wakasir.com/api/webhooks/whatsapp
+GET  https://api.wakasir.com/api/webhooks/whatsapp  ← Meta challenge verification
+```
 
-**Yang perlu disiapkan di sisi Laravel:**
-- **Laravel Sanctum** untuk autentikasi token-based (login owner dari Angular, dapat token, dipakai di tiap request API)
-- **API Controller + API Resource** untuk tiap entitas (ProductController, OrderController, dst) — setiap halaman dashboard di Bagian 8 butuh endpoint REST tersendiri (`GET /api/products`, `POST /api/products`, dst)
-- **CORS dikonfigurasi** dengan benar (`config/cors.php`) supaya Angular (domain berbeda) bisa akses API Laravel
-- **API Resource classes** (`php artisan make:resource`) untuk transformasi data konsisten dari Eloquent model ke JSON yang dikonsumsi Angular
+Backend routing berdasarkan `phone_number_id` dari payload webhook:
+```php
+$phoneNumberId = $value['metadata']['phone_number_id'];
+$business = Business::where('wa_phone_id', $phoneNumberId)->firstOrFail();
+dispatch(new ProcessIncomingWhatsAppMessage($waNumber, $text, $business->id));
+```
 
-**Yang perlu disiapkan di sisi Angular:**
-- **Angular Material** atau **PrimeNG** untuk komponen UI siap pakai (tabel, form, chart) — mempercepat pembangunan halaman CRUD dibanding bikin komponen dari nol
-- **HttpClient + Interceptor** untuk otomatis menyisipkan token Sanctum di tiap request, dan menangani error 401 (redirect ke login)
-- **NgRx** (opsional, kalau state makin kompleks) atau cukup **Services + RxJS** untuk state management sederhana di awal — untuk skala dashboard ini, service-based state biasanya cukup, NgRx baru relevan kalau nanti fitur bertambah banyak
-- **Reactive Forms** untuk semua form (produk, pengaturan, dst) — cocok untuk validasi kompleks seperti field berat produk yang wajib diisi
+---
 
-**Trade-off dibanding Filament (untuk transparansi keputusan):** karena backend dan frontend terpisah penuh, waktu development dashboard akan **lebih lama** daripada pakai admin panel Laravel siap pakai — Anda perlu bangun API Controller + API Resource untuk tiap entitas, plus komponen Angular untuk tiap halaman. Trade-off ini sepadan kalau Anda memang lebih familiar dan cepat kerja di Angular, dan kalau ke depan mau dashboard dengan UX/branding yang lebih kustom daripada tampilan admin-panel generik.
+### Flow Embedded Signup (Sisi Client)
 
-### Package Pendukung (Laravel Backend)
-| Package | Fungsi |
+```
+Client klik "Hubungkan WhatsApp" di dashboard WaKasir
+    ↓
+Popup Facebook OAuth muncul (dipicu FB.login dengan config_id milik kamu)
+    ↓
+Client login Facebook → pilih/buat WhatsApp Business Account
+    ↓
+Meta kirim authorization_code (sekali pakai) ke backend WaKasir
+    ↓
+Backend WaKasir:
+  POST graph.facebook.com/oauth/access_token → dapat user_token
+  POST graph.facebook.com/{waba_id}/assigned_system_users → buat System User Token
+    ↓
+Simpan ke DB: wa_access_token (encrypted), wa_phone_id, wa_waba_id
+    ↓
+Client selesai — nomor WA aktif, bot langsung berjalan
+```
+
+---
+
+### Setup Sekali di Meta Developer Console (oleh kamu, bukan client)
+
+1. Buat Meta App di developers.facebook.com → tambah produk WhatsApp
+2. Daftarkan Webhook URL + verify token
+3. Subscribe events: `messages`, `messaging_postbacks`
+4. Buat **Configuration ID** Embedded Signup di WhatsApp Manager
+5. Simpan `Meta App ID` dan `Configuration ID` di environment Angular
+
+---
+
+### Penyimpanan Token Per-Client di DB
+
+```
+businesses
+├── wa_phone_id          — Phone Number ID Meta (untuk kirim pesan + routing webhook)
+├── wa_phone_number      — Nomor tampilan: +62812xxx
+├── wa_access_token      — System User Token — TERENKRIPSI (encrypt() Laravel)
+├── wa_waba_id           — WhatsApp Business Account ID
+├── wa_token_expires_at  — NULL jika System User Token (tidak expire)
+└── wa_connected         — Boolean, health status terakhir
+```
+
+**Kenapa token disimpan per-client, bukan di .env?**
+Karena setiap client punya WABA berbeda. Bot harus kirim pesan dari nomor WA **milik client itu** — pelanggan melihat nama toko client, bukan nama WaKasir. Satu token global tidak bisa mengirim dari banyak nomor berbeda.
+
+Cara pakai di backend:
+```php
+$token = $business->getWaAccessTokenDecrypted(); // decrypt on-the-fly
+Http::withToken($token)->post("{$baseUrl}/{$business->wa_phone_id}/messages", [...]);
+```
+
+---
+
+### Midtrans & RajaOngkir — Tetap Per-Client
+
+| Integrasi | Kenapa per-client |
 |---|---|
-| `laravel/sanctum` | Autentikasi token-based untuk Angular SPA (login owner, proteksi API) |
-| `spatie/laravel-permission` | RBAC — sudah Anda kuasai, dipakai kalau toko punya multi-admin/staff |
-| `spatie/laravel-multitenancy` atau custom scoping via `business_id` | Isolasi data antar tenant (toko) |
-| `spatie/laravel-medialibrary` | Kelola upload foto produk |
-| `guzzlehttp/guzzle` | HTTP client untuk panggil WhatsApp Cloud API, Midtrans, RajaOngkir |
-| `maatwebsite/excel` | Import produk massal, export laporan penjualan (reuse skill xlsx Anda) |
-| `barryvdh/laravel-dompdf` | Generate invoice PDF (fitur v2) |
-| `predis/predis` | Redis client untuk session percakapan bot |
-| `laravel/telescope` (dev only) | Debug request/job selama development |
-| `spatie/laravel-webhook-client` | Validasi & terima webhook Midtrans dengan aman (verifikasi signature) |
-| `fruitcake/laravel-cors` (built-in Laravel 12) | Konfigurasi CORS supaya Angular bisa akses API |
+| **Midtrans** | Settlement masuk ke rekening merchant client langsung, bukan rekening WaKasir |
+| **RajaOngkir** | Rate limit per API key; quota masing-masing client terpisah |
 
-### Package Pendukung (Angular Frontend)
-| Package | Fungsi |
+Credentials diinput manual client di tab Pengaturan Toko → disimpan **terenkripsi** di DB.
+
+---
+
+### Biaya WA API — Cara Perhitungan
+
+Meta charge per conversation (window 24 jam):
+- **User-initiated** (pelanggan chat duluan): ~Rp301–400 per conversation
+- **Business-initiated** (kamu kirim duluan, notifikasi): ~Rp500–780 per conversation
+
+Kamu membayar Meta dari 1 kartu kredit yang terhubung ke Meta App-mu, mencakup total pemakaian semua client. Biaya ini di-absorb ke harga paket WaKasir (buffer 30–40%). Client tidak perlu punya kartu kredit untuk Meta.
+
+---
+
+### Limitasi Penting
+
+| Item | Penjelasan |
 |---|---|
-| `@angular/material` atau `primeng` | Komponen UI siap pakai: tabel data, form, chart, modal |
-| `ngx-charts` atau `chart.js` + `ng2-charts` | Grafik penjualan & laporan di halaman Ringkasan/Laporan |
-| `@auth0/angular-jwt` atau interceptor custom | Kelola token Sanctum, auto-attach ke header request |
-| `ngx-toastr` | Notifikasi sukses/gagal untuk aksi CRUD |
+| **Jendela 24 jam** | Pesan teks bebas hanya boleh dikirim dalam 24 jam sejak chat terakhir pelanggan. Di luar itu, wajib pakai **Template Message** yang sudah di-approve Meta. |
+| **Template Message** | Didaftarkan per WABA di Meta Business Manager. Kamu perlu bantu client daftarkan template "konfirmasi bayar" dan "update resi" saat onboarding. |
+| **Embedded Signup Public** | Butuh review Meta (~1–2 minggu) sebelum bisa dipakai user umum. Selama dev, gunakan tester accounts. |
+| **System User Token** | Pakai System User Token (tidak expire), bukan User Access Token (expire 60 hari). Dibuat di Meta Business Manager → System Users. |
+| **Quality Rating** | Meta monitor apakah nomor sering di-block. Jaga bot tidak kirim massal tanpa opt-in. |
 
-### Struktur Modul Backend (Domain-Driven, sesuai pola yang sudah Anda pakai di proyek sekolah)
+---
+## 6. Tech Stack — Detail Lengkap
+
+### Backend: Laravel 12 (PHP 8.3)
+
+| Layer | Teknologi |
+|---|---|
+| Framework | Laravel 12 |
+| Auth API | Laravel Sanctum (token SPA) |
+| Queue | Laravel Horizon + Redis driver |
+| HTTP client | Guzzle (built-in Laravel) |
+| Upload media | spatie/laravel-medialibrary |
+| Excel | maatwebsite/excel |
+| PDF | barryvdh/laravel-dompdf (v2) |
+| Redis client | predis/predis |
+| Debug (dev) | laravel/telescope |
+| Permissions | spatie/laravel-permission (v2 multi-staff) |
+
+### Frontend: Angular 22 (SPA)
+
+| Layer | Teknologi |
+|---|---|
+| Framework | Angular 22 (standalone components) |
+| UI Components | PrimeNG 21 |
+| Charts | Chart.js + ng2-charts |
+| HTTP + Auth | HttpClient + custom auth interceptor (Sanctum token) |
+| Forms | Reactive Forms |
+| WA Signup | Facebook JS SDK (Embedded Signup) |
+
+### Struktur Modul Backend (Domain-Driven)
+
 ```
 app/
 ├── Domain/
-│   ├── Bot/            (state machine, message handler, intent parser)
-│   ├── Catalog/        (produk, kategori, stok)
-│   ├── Order/          (order, order_items, status lifecycle)
-│   ├── Payment/        (Midtrans integration, webhook handler)
-│   ├── Shipping/       (RajaOngkir integration, kota cache, kurir)
-│   └── Tenant/         (business, subscription, onboarding)
-├── Http/
-│   ├── Controllers/Api/  (ProductController, OrderController, DashboardController, dst)
-│   └── Resources/        (ProductResource, OrderResource — transformasi JSON untuk Angular)
+│   ├── Bot/            — StateMachine, MessageHandler, IntentParser
+│   ├── Catalog/        — ProductService, CategoryService
+│   ├── Order/          — OrderService, OrderStatusService
+│   ├── Payment/        — MidtransService, PaymentService
+│   ├── Shipping/       — RajaOngkirService, ShippingService
+│   └── Tenant/         — BusinessService, SubscriptionService, WhatsAppService
+├── Http/Controllers/Api/
+│   ├── AuthController, BusinessController, CustomerController
+│   ├── DashboardController, OrderController, ProductController, SettingController
+├── Http/Resources/     — JSON transformers per entitas
 ├── Jobs/
-│   ├── ProcessIncomingWhatsAppMessage.php
-│   ├── ProcessMidtransWebhook.php
-│   └── SendWhatsAppNotification.php
+│   ├── ProcessIncomingWhatsAppMessage
+│   ├── ProcessMidtransWebhook
+│   └── SendWhatsAppNotification
+└── Models/             — Business, Product, Order, Customer, Conversation, ...
 ```
 
-### Struktur Modul Frontend (Angular, feature-based)
+### Struktur Modul Frontend (Feature-Based)
+
 ```
 src/app/
-├── core/               (auth service, http interceptor, guards)
-├── shared/             (komponen reusable: tabel, modal, chart)
-├── features/
-│   ├── dashboard/      (halaman Ringkasan)
-│   ├── products/       (Menu Produk — list, form tambah/edit, varian)
-│   ├── orders/         (Menu Pesanan — list, detail, update status/resi)
-│   ├── customers/      (Menu Pelanggan)
-│   ├── bot-settings/    (Menu Pengaturan Bot)
-│   ├── store-settings/  (Menu Pengaturan Toko & Integrasi)
-│   ├── subscription/    (Menu Langganan & Billing)
-│   └── reports/         (Menu Laporan)
+├── core/               — AuthService, guards, interceptors, theme tokens
+├── shared/             — reusable components, pipes (RupiahPipe, WaIconComponent)
+└── features/
+    ├── auth/           — login, register
+    ├── dashboard/      — KPI cards, sales chart, live polling 30s
+    ├── products/       — CRUD produk + varian
+    ├── orders/         — list + detail inline dialog + update resi
+    ├── customers/      — list + detail dengan riwayat order
+    ├── bot-settings/   — pesan sapaan, jam operasional
+    ├── store-settings/ — profil toko, WA (Embedded Signup), Midtrans, RajaOngkir
+    ├── subscription/   — paket, kuota, upgrade
+    └── reports/        — grafik penjualan, produk terlaris, kota teratas
 ```
 
 ---
+## 7. State Machine Bot
 
-## 6. State Machine Bot
-
-| State | Trigger Masuk | Aksi Bot | Trigger Keluar |
+| State | Trigger Masuk | Aksi Bot | Keluar Ke |
 |---|---|---|---|
-| `IDLE` | Pesan pertama / "menu" | Kirim menu utama | User pilih opsi |
-| `BROWSING` | Pilih "Lihat Katalog" | Kirim list produk | User pilih produk |
-| `SELECTING_QTY` | Pilih 1 produk | Tanya jumlah (+varian) | User kirim angka |
-| `CART_REVIEW` | Qty dikonfirmasi | Ringkasan, tanya tambah lagi | Ya → BROWSING; Tidak → lanjut |
-| `SELECTING_CITY` | Checkout dikonfirmasi | Tanya kota tujuan, autocomplete | Kota dikonfirmasi |
-| `SELECTING_COURIER` | Kota valid | Panggil API ongkir, tampilkan opsi kurir | User pilih kurir |
-| `AWAITING_PAYMENT` | Kurir dipilih, total final dihitung | Generate QRIS via Midtrans, kirim gambar | Webhook Midtrans masuk / expired |
-| `PAID_AWAITING_ADDRESS` | Webhook status = settlement | Kirim pesan minta alamat detail | User kirim alamat |
-| `COMPLETED` | Alamat diterima | Konfirmasi final, notif ke owner | — |
-| `EXPIRED` | QR lewat 15 menit tanpa bayar | Info kadaluarsa, tawarkan generate ulang | User minta QR baru |
-| `FALLBACK_CS` | Bot tidak mengenali input 2x berturut | Alihkan ke admin, matikan bot sementara | Admin ambil alih manual |
+| `IDLE` | Pesan pertama / "menu" / "halo" | Kirim menu utama | BROWSING |
+| `BROWSING` | Pilih Katalog | Kirim daftar produk bernomor | SELECTING_VARIANT / SELECTING_QTY |
+| `SELECTING_VARIANT` | Produk punya varian | Tampilkan pilihan varian | SELECTING_QTY |
+| `SELECTING_QTY` | Varian dipilih / produk tanpa varian | Tanya jumlah (pcs) | CART_REVIEW |
+| `CART_REVIEW` | Qty dikonfirmasi | Ringkasan cart, tanya tambah | BROWSING (ya) / SELECTING_CITY (tidak) |
+| `SELECTING_CITY` | Checkout | Autocomplete kota, disambiguation | SELECTING_COURIER |
+| `SELECTING_COURIER` | Kota valid | Hitung ongkir + tampilkan kurir | AWAITING_PAYMENT |
+| `AWAITING_PAYMENT` | Kurir dipilih | Buat Order + QRIS Midtrans | PAID_AWAITING_ADDRESS (settlement) / EXPIRED |
+| `PAID_AWAITING_ADDRESS` | Webhook settlement | Minta alamat lengkap | COMPLETED |
+| `COMPLETED` | Alamat diterima | Konfirmasi final + notif owner | IDLE (reset) |
+| `EXPIRED` | QR > 15 menit | Info expired, tawarkan buat ulang | AWAITING_PAYMENT / IDLE |
+| `FALLBACK_CS` | 2x input tidak dikenali | Alihkan ke admin manual | IDLE (setelah admin selesai) |
 
-**Catatan jendela 24 jam:** WhatsApp hanya izinkan pesan bebas dalam 24 jam sejak chat terakhir pelanggan. Kalau webhook pembayaran masuk setelah lewat 24 jam (pelanggan bayar telat), notifikasi `PAID_AWAITING_ADDRESS` harus pakai **template message** yang sudah di-approve Meta, bukan pesan bebas.
+**Ketentuan:**
+- Session timeout **30 menit** tanpa aktivitas → auto reset ke IDLE
+- Ketik "menu", "reset", "halo", "mulai" → selalu kembali ke IDLE dari state apapun
+- Fallback threshold: 2x berturut-turut tidak dikenali → FALLBACK_CS
+- Jendela 24 jam Meta: notifikasi di luar window wajib Template Message
 
 ---
 
-## 7. Skema Database
+## 8. Skema Database
 
 ```
-businesses        : id, name, wa_phone_id, midtrans_server_key, midtrans_client_key,
-                     rajaongkir_api_key, origin_city_id, subscription_plan, status
+businesses
+  id, name
+  wa_phone_id, wa_phone_number             — dari Embedded Signup
+  wa_access_token (encrypted), wa_waba_id  — BSP token per-client
+  wa_token_expires_at, wa_connected
+  midtrans_server_key (encrypted), midtrans_client_key (encrypted), midtrans_merchant_id
+  rajaongkir_api_key (encrypted), origin_city_id, origin_address
+  subscription_plan, status, subscription_ends_at
+  bot_settings (json), operating_hours (json)
 
-products          : id, business_id, name, price, stock, weight_gram, image_url, category
+users
+  id, name, email, password, business_id, role
 
-product_variants  : id, product_id, variant_name (misal "Size: L"), stock_override
+subscriptions
+  id, business_id, plan, quota_conversation, quota_used, max_products
+  renewed_at, ends_at, status
 
-customers         : id, business_id, wa_number, name
+products
+  id, business_id, name, description, price, stock, weight_gram
+  category, image_url, is_active
 
-conversations     : id, customer_id, current_state, cart_data(json),
-                     selected_city_id, selected_courier(json), updated_at
+product_variants
+  id, product_id, variant_name, stock_override, price_override, is_active
 
-orders            : id, business_id, customer_id, subtotal, shipping_cost, total_amount,
-                     status, midtrans_order_id, courier_name, courier_service
+customers
+  id, business_id, wa_number, name, email
 
-order_items       : id, order_id, product_id, variant_id(nullable), qty, price_at_order
+conversations
+  id, customer_id, current_state, cart_data (json)
+  selected_city_id, selected_city_name, selected_courier (json)
+  fallback_count, last_activity_at
 
-payments          : id, order_id, midtrans_transaction_id, qr_code_url, status, paid_at
+orders
+  id, business_id, customer_id, order_number
+  subtotal, shipping_cost, total_amount
+  status, courier_name, courier_service, tracking_number
+  paid_at, shipped_at, completed_at
 
-addresses         : id, order_id, city_id, subdistrict, full_address, recipient_name, postal_code
+order_items
+  id, order_id, product_id, variant_id (nullable)
+  qty, price_at_order, variant_name
 
-shipping_cache    : id, province_id, city_id, city_name, subdistrict_id, subdistrict_name
-                     (cache data wilayah RajaOngkir, refresh berkala)
+payments
+  id, order_id, midtrans_transaction_id, payment_type
+  qr_code_url, status, amount, expires_at, paid_at, payment_details (json)
 
-message_logs      : id, conversation_id, direction(in/out), content, timestamp
+addresses
+  id, order_id, city_id, city_name, subdistrict_id, subdistrict_name
+  full_address, recipient_name, recipient_phone, postal_code, notes
 
-subscriptions     : id, business_id, plan, quota_conversation, quota_used, renewed_at
+shipping_cache
+  id, city_id, province_id, city_name, province_name, city_type, postal_code
+  (cache dari RajaOngkir, refresh berkala via artisan command)
+
+message_logs
+  id, business_id, wa_number, conversation_id
+  direction (in/out), content, message_type, metadata (json), timestamp
 ```
 
 ---
+## 9. Dashboard Owner — Spesifikasi per Halaman
 
-## 8. Dashboard Owner — Spesifikasi Lengkap per Halaman
+### 9.1 Dashboard Home (Ringkasan)
+- KPI cards: omzet hari ini, order hari ini, perlu diproses, total pelanggan
+- Grafik penjualan 7d/30d/90d (line chart, live polling 30 detik)
+- Badge notifikasi order baru (muncul otomatis saat pending bertambah)
+- Tabel recent orders + produk stok menipis
 
-### 8.1 Halaman Ringkasan (Dashboard Home)
-- Kartu ringkasan: omzet hari ini, jumlah order hari ini, order menunggu diproses, order menunggu pembayaran
-- Grafik penjualan 7/30 hari terakhir
-- Notifikasi order baru real-time (badge counter)
+### 9.2 Menu Produk
+- Tabel + filter status aktif/nonaktif, search nama
+- Form CRUD: nama, deskripsi, harga, stok, **berat gram (wajib)**, kategori, foto
+- Sub-form varian: ukuran/warna per produk, stok & harga override per varian
+- Toggle aktif/nonaktif tanpa hapus data
+- Import massal Excel (v2)
 
-### 8.2 Menu Produk
-- Tabel produk: nama, harga, stok, berat, status aktif/nonaktif
-- Form tambah/edit produk: nama, deskripsi, harga, stok, **berat (gram, wajib)**, kategori, upload foto (bisa multi-foto)
-- Fitur varian: tambah opsi ukuran/warna per produk dengan stok terpisah opsional
-- Import massal via Excel (template disediakan) — reuse kemampuan xlsx Anda
-- Toggle "nonaktifkan sementara" untuk produk yang stok habis, tanpa perlu hapus data
+### 9.3 Menu Pesanan
+- Tabel dengan filter: status, tanggal, search (nomor order / WA)
+- Detail inline dialog: items, subtotal, ongkir, total, customer, alamat, kurir, payment
+- Timeline status visual (pending → paid → processing → shipped → completed)
+- Input resi → bot kirim notif ke pelanggan otomatis
+- Aksi: mulai proses, batalkan, tandai selesai
 
-### 8.3 Menu Pesanan
-- Tabel order dengan filter: status (menunggu bayar/lunas/diproses/dikirim/selesai/dibatalkan), tanggal, kota tujuan
-- Detail order: item dibeli, subtotal, ongkir, total, data pelanggan, alamat lengkap, kurir dipilih
-- Aksi: input nomor resi (trigger notifikasi otomatis ke pelanggan), tandai "dibatalkan"/"refund", tandai "selesai"
-- Search berdasarkan nomor order atau nomor WA pelanggan
+### 9.4 Menu Pelanggan
+- Tabel: nomor WA, nama, total order, total belanja, terakhir transaksi
+- Klik → modal detail riwayat order lengkap per customer
+- Direct link ke WhatsApp (wa.me)
+- Server-side pagination + search
 
-### 8.4 Menu Pelanggan
-- Riwayat pembeli: nomor WA, nama (jika ada), total transaksi, total order
-- Bisa lihat riwayat chat/order per pelanggan untuk konteks kalau ada komplain
+### 9.5 Menu Pengaturan Bot
+- Edit pesan sapaan, pesan fallback
+- Jam operasional (enable/disable + waktu + timezone)
+- (v2) Template pesan Meta: daftarkan + preview
 
-### 8.5 Menu Pengaturan Bot
-- Edit pesan sapaan otomatis
-- Atur jam operasional (di luar jam, bot tetap terima order tapi kasih info "diproses besok")
-- Preview simulasi percakapan bot (test sebelum publish perubahan)
-- Kelola template pesan yang sudah di-approve Meta (untuk notifikasi di luar jendela 24 jam)
+### 9.6 Menu Pengaturan Toko & Integrasi
+- Tab Profil: nama toko, status akun
+- Tab WhatsApp: tombol **"Hubungkan WhatsApp"** (Embedded Signup)
+  - Status koneksi (terhubung/terputus + nomor aktif)
+  - Tombol disconnect
+- Tab Midtrans: Server Key + Client Key (masked), environment sandbox/production
+- Tab RajaOngkir: API Key (masked), kota asal, alamat toko, pilih kurir aktif
 
-### 8.6 Menu Pengaturan Toko & Integrasi
-- Connect/reconnect nomor WhatsApp Business (status koneksi: aktif/terputus)
-- Input kredensial Midtrans (Server Key, Client Key) milik toko sendiri
-- Input API key RajaOngkir + pilih alamat asal toko (kota/kecamatan untuk hitung ongkir)
-- Pilih kurir yang diaktifkan (JNE, J&T, SiCepat, dst — sesuai yang didukung RajaOngkir)
+### 9.7 Menu Langganan
+- Paket aktif, tanggal perpanjangan, progress bar kuota
+- Tabel perbandingan paket + tombol upgrade
+- Alert jika kuota > 80%
 
-### 8.7 Menu Langganan & Billing
-- Paket aktif, tanggal perpanjangan
-- Pemakaian kuota conversation bulan ini (progress bar, alert kalau mendekati batas)
-- Riwayat pembayaran langganan
-- Upgrade/downgrade paket
-
-### 8.8 Menu Laporan
-- Grafik penjualan per hari/minggu/bulan
-- Produk terlaris
-- Kota tujuan terbanyak (insight untuk strategi ongkir/stok)
-- Export laporan ke Excel (reuse skill xlsx)
-
-### 8.9 Manajemen Tim (v2)
-- Undang staff/admin tambahan dengan role terbatas (misal: staff hanya bisa lihat & update status order, tidak bisa ubah pengaturan toko) — reuse `spatie/laravel-permission` yang sudah Anda kuasai
-
----
-
-## 9. Katalog Masalah & Solusi (Edge Cases)
-
-### 9.1 Ongkir & Alamat
-| Masalah | Solusi |
-|---|---|
-| Ongkir beda tiap kota, tidak bisa hardcode | Integrasi RajaOngkir — fitur hitung ongkos kirim otomatis, pelacakan resi, dan pengiriman COD/non-COD via REST/JSON yang kompatibel dengan Laravel. Paket gratis cukup untuk 100 request/hari di awal. |
-| RajaOngkir vs Biteship | RajaOngkir menawarkan biaya langganan tetap tanpa tambahan per call, sementara Biteship charge berdasarkan jumlah API request yang bisa membengkak saat traffic tinggi. **Untuk MVP dengan volume belum pasti, RajaOngkir lebih aman.** Biteship unggul di resi otomatis & request pickup langsung — cocok untuk v2 saat volume besar. |
-| Pelanggan salah ketik nama kota | Gunakan autocomplete dari cache data kota (RajaOngkir mengizinkan cache data provinsi/kota/kecamatan), tampilkan 3 kandidat kota untuk dikonfirmasi, bukan free text bebas. |
-| Alamat di luar jangkauan kurir tertentu | Render ulang daftar kurir dari response API setiap kali — kalau kurir tidak mengembalikan hasil untuk kota tujuan, otomatis hide opsi itu. |
-| Berat produk belum diinput | Wajibkan field berat saat input produk; beri default + warning di dashboard jika kosong. |
-| Permintaan COD | RajaOngkir mendukung COD dan non-COD, tapi untuk v1 batasi ke non-COD saja (bayar QRIS dulu) — COD butuh alur berbeda (kurir yang nagih), jadi ditunda ke v2. |
-| Kirim ke luar negeri | RajaOngkir punya endpoint international origin/destination, tapi untuk MVP jangan didukung dulu — kompleksitas bea cukai & kurs terlalu besar. Bot balas: "hanya melayani domestik". |
-| Ambil sendiri di toko | Tambahkan opsi "Ambil Sendiri" di step kurir — skip ongkir, total = harga produk saja. |
-
-### 9.2 Pembayaran
-| Masalah | Solusi |
-|---|---|
-| QR expired sebelum sempat bayar | Reminder otomatis menit ke-10, tombol "Generate QR Baru" tanpa ulang dari awal (cart & alamat tetap tersimpan). |
-| Mau ubah pesanan setelah QR digenerate | Cancel transaksi Midtrans lama via API sebelum generate QR baru — hindari 2 tagihan aktif. |
-| Refund setelah bayar | v1: manual oleh owner (update status "refund requested" + notifikasi); refund otomatis via API jadi fitur v2. |
-| Double order dari 2 device | Tampilkan Order ID jelas di setiap pesan supaya pelanggan sadar ada transaksi berjalan. |
-
-### 9.3 Stok & Produk
-| Masalah | Solusi |
-|---|---|
-| Race condition stok terakhir | Lock stok **saat generate QR**, bukan saat pilih produk — pakai `SELECT ... FOR UPDATE`. |
-| Produk punya varian | Sub-state tambahan di `SELECTING_QTY`, simpan sebagai atribut `order_items`, bukan produk terpisah. |
-| Stok habis setelah dibayar (multi-channel jualan) | Owner tandai "stok habis" di dashboard → bot otomatis kirim permintaan maaf + info refund. |
-
-### 9.4 Percakapan & UX
-| Masalah | Solusi |
-|---|---|
-| Pesan di luar skrip | Fallback ke `FALLBACK_CS` — matikan bot sementara, alihkan ke admin manual. |
-| Pelanggan hilang di tengah alur | Session timeout 30 menit → reset ke `IDLE`. |
-| Ubah alamat setelah dikirim ke bot | Command "ubah alamat" selama status belum "dikirim". |
-| Banyak pelanggan chat bersamaan | Session per `business_id + wa_number` di Redis, bukan global. |
-| Minta invoice formal | v2: generate PDF otomatis, kirim sebagai dokumen di chat. |
-| Chat di luar jam operasional | Bot tetap proses, beri info kapan mulai diproses. |
-
-### 9.5 Kepatuhan (Compliance)
-| Masalah | Solusi |
-|---|---|
-| Nomor WA di-banned Meta karena dianggap spam | Jangan broadcast tanpa opt-in; pakai template resmi untuk notifikasi di luar 24 jam. |
-| Data pelanggan antar toko tercampur | Isolasi ketat per `business_id` di level query, di dashboard maupun API. |
-| RajaOngkir melarang request otomatis tanpa aksi user | Setiap API call ongkir/tracking harus dipicu aksi nyata pelanggan/admin, bukan cron job berulang tanpa henti — dilarang keras "dumping" data ongkir atau auto-update resi otomatis. |
+### 9.8 Menu Laporan
+- Period selector: 7d / 30d / 90d
+- Grafik penjualan (line chart), produk terlaris (bar chart horizontal)
+- Kota tujuan teratas (bar progress list)
+- Summary status order (total, selesai, dikirim, dibatalkan)
 
 ---
 
-## 10. Fitur MVP vs V2
+## 10. Katalog Masalah & Solusi (Edge Cases)
 
-### MVP (Target 8 minggu)
-- [ ] Onboarding toko + connect WA number (dibantu manual dulu)
-- [ ] Upload produk manual + wajib input berat
-- [ ] Bot flow lengkap: sapa → katalog → pilih produk → **kota → ongkir → kurir** → bayar → alamat
-- [ ] Integrasi RajaOngkir (paket gratis/starter)
-- [ ] Generate QRIS Midtrans otomatis + webhook konfirmasi
-- [ ] Lock stok saat generate QR
-- [ ] Fallback CS kalau bot tidak paham
-- [ ] Laravel Sanctum + API Controller/Resource untuk Produk, Pesanan, Pengaturan Toko, Ringkasan
-- [ ] Dashboard Angular: halaman Produk, Pesanan, Pengaturan Toko, Ringkasan (konsumsi API di atas)
-- [ ] Isolasi data multi-tenant
+### 10.1 WhatsApp & Onboarding BSP
+| Masalah | Solusi |
+|---|---|
+| Client tidak punya akun Meta Developer | Embedded Signup — client hanya login Facebook biasa, tidak perlu developer console |
+| Token WA expired (User Token 60 hari) | Pakai System User Token (tidak expire) — dibuat di Meta Business Manager → System Users |
+| Nomor WA client di-banned Meta | Jaga bot tidak broadcast tanpa opt-in; monitor Quality Rating di dashboard Meta |
+| Embedded Signup belum di-approve Meta | Selama review, onboard client manual (masukkan phone_number_id & token manual) |
+| Pesan di luar jendela 24 jam | Wajib Template Message yang sudah approve Meta; daftarkan template notifikasi saat onboarding |
 
-### V2 (Setelah 3–5 toko aktif & tervalidasi)
-- [ ] Self-service Embedded Signup WA
+### 10.2 Ongkir & Pengiriman
+| Masalah | Solusi |
+|---|---|
+| Ongkir beda tiap kota | Integrasi RajaOngkir real-time per checkout |
+| Pelanggan typo nama kota | Autocomplete dari cache DB + tampilkan 5 kandidat untuk dipilih |
+| Kurir tidak cover kota tujuan | Hanya tampilkan kurir yang mengembalikan result dari API |
+| Berat produk tidak diisi | Field wajib saat buat produk; warning di dashboard jika kosong |
+| Ambil sendiri di toko | Opsi tetap ditambahkan di daftar kurir dengan ongkir Rp0 |
+
+### 10.3 Pembayaran
+| Masalah | Solusi |
+|---|---|
+| QR expired sebelum bayar | State EXPIRED → tawarkan generate ulang (cart tetap tersimpan) |
+| Ubah pesanan setelah QR muncul | Cancel transaksi Midtrans lama dulu via API, baru generate QR baru |
+| Refund | v1: manual owner (update status + notif); v2: Midtrans refund API |
+| Race condition stok terakhir | Lock row `SELECT ... FOR UPDATE` saat generate QR |
+
+### 10.4 Bot & Percakapan
+| Masalah | Solusi |
+|---|---|
+| Input tidak dikenali 2x | FALLBACK_CS → admin takeover manual |
+| Session terbengkalai | Timeout 30 menit → auto reset IDLE |
+| Pelanggan ketik "menu" di tengah alur | Selalu reset ke IDLE, tidak peduli state aktif |
+| Banyak pelanggan bersamaan | Session diisolasi per `(business_id, wa_number)` |
+
+### 10.5 Kepatuhan
+| Masalah | Solusi |
+|---|---|
+| Data antar tenant bocor | Query selalu scoped ke `business_id`; token WA tidak pernah dikembalikan ke frontend |
+| RajaOngkir larangan auto-request | Semua API call ongkir/resi dipicu aksi user nyata (bukan cron) |
+| Broadcast spam | Tidak ada fitur broadcast di v1; v2 hanya dengan opt-in eksplisit |
+
+---
+## 11. Fitur MVP vs V2
+
+### MVP — Target selesai (implementasi sudah dikerjakan)
+
+**Backend (Laravel 12)**
+- [x] Multi-tenant isolasi via `business_id`
+- [x] Auth: register, login, logout, me (Sanctum)
+- [x] CRUD Produk + varian + upload foto (MediaLibrary)
+- [x] Bot engine: StateMachine + MessageHandler + IntentParser
+  - [x] States: IDLE, BROWSING, SELECTING_VARIANT, SELECTING_QTY, CART_REVIEW,
+        SELECTING_CITY, SELECTING_COURIER, AWAITING_PAYMENT, PAID_AWAITING_ADDRESS,
+        COMPLETED, EXPIRED, FALLBACK_CS
+  - [x] Multi-item cart, session timeout 30 menit, operating hours
+  - [x] Product matching by number or name, city disambiguation
+- [x] Integrasi RajaOngkir (cache kota, hitung ongkir, track resi)
+- [x] Integrasi Midtrans Core API (QRIS charge, webhook settlement)
+  - [x] Per-business key injection (tiap client pakai Midtrans mereka sendiri)
+- [x] Order management: create, paginate, filter, cancel (restore stock), stats
+- [x] Notifikasi WA: kirim resi, konfirmasi bayar, notif owner
+- [x] WhatsApp webhook: GET challenge, POST routing per phone_number_id
+- [x] CustomerController dengan stats per customer
+- [x] Dashboard API: KPI, sales chart, top products, top cities
+- [x] Settings API: bot settings, operating hours, subscription, categories
+- [x] Subscription: quota tracking, upgrade plan, limit produk per plan
+- [x] Queue Jobs: ProcessIncomingWhatsAppMessage, ProcessMidtransWebhook,
+      SendWhatsAppNotification (retry 3x, failed handler)
+- [x] Migrations: fallback_count di conversations, wa_number di message_logs,
+      wa_access_token + wa_waba_id + wa_connected di businesses
+
+**Frontend (Angular 22)**
+- [x] Auth: login, register, route guards, Sanctum interceptor
+- [x] Dashboard: KPI, sales chart, live polling 30 detik, badge notif order baru
+- [x] Produk: list + CRUD + varian
+- [x] Pesanan: list paginasi + filter + detail dialog + resi + status update
+- [x] Pelanggan: list paginasi + search + detail modal (riwayat order)
+- [x] Bot Settings: pesan sapaan, fallback, jam operasional
+- [x] Store Settings: profil toko, tab WA (siap Embedded Signup), Midtrans, RajaOngkir
+- [x] Langganan: paket aktif, kuota, upgrade
+- [x] Laporan: grafik penjualan, produk terlaris, kota teratas, status summary
+
+### V2 — Setelah 3–5 toko aktif & tervalidasi
+
+- [ ] Embedded Signup self-service (butuh approve Meta)
+- [ ] WhatsAppService per-business token di SendWhatsAppNotification
 - [ ] Import produk massal Excel
-- [ ] COD, pengiriman internasional
-- [ ] Refund otomatis via API
-- [ ] Invoice PDF otomatis
-- [ ] Manajemen tim/staff (multi-admin per toko)
-- [ ] Broadcast promo (dengan opt-in)
-- [ ] Upgrade ke Biteship untuk otomatisasi pickup kurir
+- [ ] Template Message Meta (daftar + kirim dari dashboard)
+- [ ] Refund otomatis via Midtrans API
+- [ ] Invoice PDF otomatis (dikirim ke pelanggan via WA)
+- [ ] COD support
+- [ ] Manajemen tim/staff per toko (spatie/laravel-permission)
+- [ ] Broadcast promo (opt-in saja)
+- [ ] Biteship untuk pickup otomatis
+- [ ] WhatsApp Flows (form alamat terstruktur, bukan free text)
 
 ---
 
-## 11. Model Bisnis & Harga
+## 12. Model Bisnis & Harga
 
-| Paket | Harga/bulan | Kuota Conversation | Jumlah Produk |
+| Paket | Harga/bulan | Kuota Conversation | Maks Produk |
 |---|---|---|---|
-| Starter | Rp99.000 | ~200 percakapan | 30 produk |
-| Growth | Rp249.000 | ~600 percakapan | 200 produk |
-| Pro | Rp499.000 | ~1.500 percakapan | Unlimited |
+| Starter | Rp99.000 | 200 | 30 |
+| Growth | Rp249.000 | 600 | 200 |
+| Pro | Rp499.000 | 1.500 | Unlimited |
 
-Harga WA API resmi berkisar Rp301–Rp780 per conversation tergantung kategori pesan — sisihkan buffer 30-40% dari harga jual untuk menutup biaya conversation ke Meta.
+**Komponen biaya yang kamu tanggung:**
+- Biaya conversation Meta: ~Rp301–780/conversation (user-initiated lebih murah)
+- Buffer 30–40% dari harga paket untuk menutup biaya Meta
+- Kamu bayar Meta 1 tagihan global dari semua client; client tidak perlu kartu kredit Meta
 
 ---
 
-## 12. Rencana Eksekusi 8 Minggu
+## 13. Rencana Eksekusi 8 Minggu
 
 | Minggu | Fokus |
 |---|---|
-| 1 | Desain state machine final + skema database + setup project Laravel (backend) & Angular (frontend) + Sanctum auth |
-| 2 | Webhook receiver WA + kirim pesan teks dasar + queue/Horizon setup |
-| 3 | Flow katalog (interactive list) + pilih produk + qty + varian |
-| 4 | Integrasi RajaOngkir: cache kota, hitung ongkir, pilih kurir |
-| 5 | Integrasi Midtrans QRIS + webhook konfirmasi + minta alamat |
-| 6 | API Controller/Resource + Dashboard Angular: Produk, Pesanan, Pengaturan, Ringkasan |
-| 7 | Testing end-to-end dengan 1-2 toko beta (gratis) — jadi studi kasus & konten TikTok |
-| 8 | Perbaikan dari feedback beta, landing page, mulai jual |
+| 1 | Database schema + Laravel setup + Sanctum auth + Angular skeleton |
+| 2 | Webhook WA (GET challenge + POST routing) + queue/Horizon + kirim pesan dasar |
+| 3 | Bot flow: katalog → varian → qty → cart → multi-item |
+| 4 | RajaOngkir: cache kota, hitung ongkir, pilih kurir |
+| 5 | Midtrans QRIS: generate + webhook settlement + state PAID_AWAITING_ADDRESS |
+| 6 | Dashboard Angular lengkap: semua halaman |
+| 7 | End-to-end test dengan 1–2 toko beta; onboarding manual (belum Embedded Signup) |
+| 8 | Fix feedback beta + landing page + submit Embedded Signup review ke Meta |
 
 ---
 
-## 13. Risiko & Mitigasi
+## 14. Risiko & Mitigasi
 
-- **Meta suspend nomor WA** → hindari broadcast tanpa opt-in, pakai template resmi
-- **QR expired sebelum sempat bayar** → reminder otomatis + regenerate mudah
-- **Alamat berantakan** → v2 pakai WhatsApp Flow (form terstruktur), bukan free text
-- **Race condition stok** → lock database saat generate QR
-- **Biaya conversation membengkak** → monitor pemakaian per toko, alert sebelum kuota habis
-- **RajaOngkir rate limit / larangan auto-request** → semua panggilan API dipicu aksi user nyata, cache data statis (kota/provinsi)
-
----
-
-## 14. Strategi Promosi
-
-Alur "chat → ongkir otomatis → QR muncul → bayar → selesai" sangat visual — cocok untuk:
-- Rekam layar HP: proses order dari sisi pelanggan dari awal sampai QR muncul otomatis
-- Testimoni toko beta pertama: "sebelum pakai bot, saya balas chat manual 3 jam sehari — sekarang otomatis semua"
-- Series "membangun SaaS ini dari nol" — storytelling proses membangun biasanya mendapat banyak interaksi karena orang suka mengikuti journey yang jujur dan detail
+| Risiko | Mitigasi |
+|---|---|
+| Meta suspend nomor WA client | Tidak ada broadcast tanpa opt-in; pakai template resmi untuk di luar 24 jam |
+| Embedded Signup review lambat | MVP onboarding manual dulu; Embedded Signup push setelah ada client nyata |
+| Biaya conversation Meta membengkak | Monitor pemakaian per toko; alert owner sebelum kuota habis |
+| QR expired sebelum bayar | Reminder menit ke-10 + regenerate mudah (cart tetap) |
+| Race condition stok | SELECT FOR UPDATE saat generate QR |
+| RajaOngkir rate limit | Semua API call dipicu aksi user; cache data statis kota/provinsi |
+| Token WA client expire | System User Token (tidak expire); monitoring wa_token_expires_at |
+| Data bocor antar tenant | Semua query scoped `business_id`; token tidak pernah ke frontend |
 
 ---
 
-## 15. Langkah Selanjutnya
+## 15. Strategi Promosi
 
-Yang bisa dikerjakan lebih detail dari sini:
-1. Migration Laravel siap pakai untuk skema database di atas
-2. Contoh kode integrasi RajaOngkir + Midtrans (request/response, webhook handler)
-3. API Controller + API Resource Laravel untuk Produk & Pesanan, plus komponen Angular (tabel + form) yang mengonsumsinya
-4. Setup Sanctum + Angular HttpInterceptor untuk autentikasi dashboard
-5. Diagram flowchart visual dari state machine bot
+Alur "chat → pilih produk → QR muncul otomatis → bayar → selesai" sangat visual:
+- **Rekam demo dari HP**: proses order dari sisi pelanggan 30 detik — QR muncul sendiri
+- **Testimoni toko beta**: "dulu balas chat manual 3 jam sehari, sekarang bot yang handle"
+- **Series building in public**: dokumentasi proses bangun SaaS dari nol — journey lebih menarik dari sekadar promosi produk jadi
+- **Konten teknis**: "cara satu WA bot melayani 50 toko berbeda dengan 1 server" — narasi BSP ini unik dan jarang dibahas
 
-Beri tahu mana yang mau dikerjakan lebih dulu.
+---

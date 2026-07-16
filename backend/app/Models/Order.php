@@ -52,13 +52,23 @@ class Order extends Model
         return $this->hasMany(OrderItem::class);
     }
 
-    public function payment(): HasMany
+    public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
     }
 
-    public function address(): HasMany
+    public function payment(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Payment::class)->latestOfMany();
+    }
+
+    public function addresses(): HasMany
     {
         return $this->hasMany(Address::class);
+    }
+
+    public function address(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Address::class)->latestOfMany();
     }
 }

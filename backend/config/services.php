@@ -26,10 +26,14 @@ return [
     ],
 
     'whatsapp' => [
-        'phone_id' => env('WA_PHONE_ID'),
-        'access_token' => env('WA_ACCESS_TOKEN'),
-        'webhook_verify_token' => env('WA_WEBHOOK_VERIFY_TOKEN'),
-        'base_url' => 'https://graph.facebook.com/v18.0',
+        'phone_id'              => env('WA_PHONE_ID'),
+        'access_token'          => env('WA_ACCESS_TOKEN'),                      // global fallback (dev only)
+        'verify_token'          => env('WA_WEBHOOK_VERIFY_TOKEN', 'wa_verify_default'),
+        'base_url'              => env('WA_BASE_URL', 'https://graph.facebook.com/v18.0'),
+        // BSP Embedded Signup — isi sekali oleh kamu (pemilik WaKasir)
+        'app_id'                => env('META_APP_ID'),
+        'app_secret'            => env('META_APP_SECRET'),
+        'config_id'             => env('META_EMBEDDED_SIGNUP_CONFIG_ID'),       // dari WhatsApp Manager
     ],
 
 ];

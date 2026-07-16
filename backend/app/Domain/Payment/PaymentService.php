@@ -14,6 +14,18 @@ class PaymentService
 
     public function createPayment(Order $order, array $customerData): Payment
     {
+        // Use per-business Midtrans keys if configured, otherwise fall back to global
+        $business = $order->business;
+        if ($business && $business->midtrans_server_key) {
+            $midtrans = new MidtransService(
+                serverKey:    $business->midtrans_server_key,
+                clientKey:    $business->midtrans_client_key ?? '',
+                isProduction: config('services.midtrans.is_production', false),
+            );
+        } else {
+            $midtrans = $this->midtransService;
+        }
+
         $items = $order->items->map(function ($item) {
             return [
                 'id' => $item->product_id,
@@ -41,7 +53,7 @@ class PaymentService
         ];
 
         try {
-            $midtransResponse = $this->midtransService->createTransaction($midtransData);
+            $midtransResponse = $midtrans->createTransaction($midtransData);
 
             $payment = Payment::create([
                 'order_id' => $order->id,
@@ -72,8 +84,16 @@ class PaymentService
         $fraudStatus = $webhookData['fraud_status'] ?? null;
         $signatureKey = $webhookData['signature_key'];
 
+        // Use per-business key for signature verification
+        $order = Order::where('order_number', $orderId)->first();
+        $business = $order?->business;
+
+        $midtrans = ($business && $business->midtrans_server_key)
+            ? new MidtransService(serverKey: $business->midtrans_server_key, clientKey: $business->midtrans_client_key ?? '')
+            : $this->midtransService;
+
         // Verify signature
-        if (!$this->midtransService->verifyWebhookSignature(
+        if (!$midtrans->verifyWebhookSignature(
             $orderId,
             $webhookData['status_code'],
             $webhookData['gross_amount'],
@@ -83,7 +103,6 @@ class PaymentService
             return false;
         }
 
-        $order = Order::where('order_number', $orderId)->first();
         if (!$order) {
             \Log::warning('Order not found for webhook', ['order_id' => $orderId]);
             return false;

@@ -24,7 +24,15 @@ class ProductController extends Controller
             return response()->json(['error' => 'No business associated with user'], 403);
         }
 
-        $products = $this->productService->getActiveProducts($businessId);
+        $perPage  = (int) $request->query('per_page', 0);
+        $products = $this->productService->getActiveProducts($businessId, $perPage);
+
+        $data = $perPage > 0 ? $products : ['products' => $products->load('media')];
+
+        if ($perPage > 0) {
+            // $products is a paginator — transform items
+            return response()->json($products->through(fn ($p) => $p->load('media')));
+        }
 
         return response()->json([
             'products' => $products->load('media'),

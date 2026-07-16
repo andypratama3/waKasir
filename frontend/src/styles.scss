@@ -585,6 +585,72 @@ body {
 // ============================================================
 // Utility Classes
 // ============================================================
+.text-muted { color: var(--color-text-muted); }
+.text-warning { color: #f59e0b; }
+.text-danger { color: #ef4444; }
+.text-primary { color: var(--color-primary); }
+.text-success { color: var(--color-success); }
+
+.empty-icon-muted {
+  font-size: 56px;
+  color: var(--color-text-muted);
+}
+
+.upload-hint {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+}
+
+.loading-card {
+  padding: 24px;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-icon {
+  font-size: 36px;
+  color: var(--color-primary);
+}
+
+.section-heading-sm {
+  font-size: 1rem;
+}
+
+.qris-label {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.action-col {
+  width: 80px;
+}
+
+.clickable-row {
+  cursor: pointer;
+}
+
+.status-badge-sm {
+  font-size: 0.7rem;
+}
+
+.status-badge-md {
+  font-size: 0.875rem;
+  padding: 6px 14px;
+}
+
+.btn-danger-spaced {
+  margin-top: 8px;
+}
+
+.variant-flex-2 {
+  flex: 2;
+}
+
+.variant-flex-1 {
+  flex: 1;
+}
 .flex         { display: flex; }
 .flex-col     { display: flex; flex-direction: column; }
 .items-center { align-items: center; }

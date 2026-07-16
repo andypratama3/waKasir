@@ -1,0 +1,151 @@
+<div class="reports-page page-enter">
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">
+        <span class="material-symbols-outlined">bar_chart</span>
+        Laporan
+      </h1>
+      <p class="page-subtitle">Analitik penjualan dan performa toko Anda</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-outline btn-sm" (click)="loadAll()" title="Refresh data">
+        <span class="material-symbols-outlined">refresh</span>
+        Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- Period selector -->
+  <div class="period-tabs">
+    @for (p of periods; track p.value) {
+      <button
+        class="period-tab"
+        [class.active]="selectedPeriod() === p.value"
+        (click)="changePeriod(p.value)"
+      >{{ p.label }}</button>
+    }
+  </div>
+
+  <!-- Order status summary -->
+  @if (orderStats()) {
+    <div class="status-summary">
+      @for (item of [
+        { label: 'Total Order',  val: orderStats().total,     icon: 'receipt_long',    color: 'blue'  },
+        { label: 'Selesai',      val: orderStats().completed, icon: 'check_circle',    color: 'green' },
+        { label: 'Dikirim',      val: orderStats().shipped,   icon: 'local_shipping',  color: 'teal'  },
+        { label: 'Dibatalkan',   val: orderStats().cancelled, icon: 'cancel',          color: 'red'   }
+      ]; track item.label) {
+        <div class="status-card">
+          <span class="material-symbols-outlined status-icon status-icon-{{ item.color }}">{{ item.icon }}</span>
+          <div class="status-val">{{ item.val }}</div>
+          <div class="status-lbl">{{ item.label }}</div>
+        </div>
+      }
+    </div>
+  } @else if (loading()) {
+    <div class="status-summary">
+      @for (i of [1,2,3,4]; track i) {
+        <div class="status-card skeleton-card">
+          <p-skeleton height="20px" width="40px" />
+          <p-skeleton height="32px" width="60px" styleClass="mt-2" />
+          <p-skeleton height="12px" width="80px" styleClass="mt-1" />
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Sales chart -->
+  <div class="report-card">
+    <div class="card-head">
+      <div class="card-head-left">
+        <span class="material-symbols-outlined">show_chart</span>
+        <h3>Grafik Penjualan</h3>
+      </div>
+    </div>
+
+    @if (loading()) {
+      <p-skeleton height="240px" borderRadius="12px" />
+    } @else if (salesChart()) {
+      <div class="chart-wrap" style="height:240px">
+        <p-chart type="line" [data]="salesChart()" [options]="lineOptions" />
+      </div>
+    } @else {
+      <div class="no-data-wrap">
+        <span class="material-symbols-outlined no-data-icon">show_chart</span>
+        <p class="no-data">Belum ada data penjualan untuk periode ini.</p>
+      </div>
+    }
+  </div>
+
+  <!-- Two-column: top products + top cities -->
+  <div class="two-col">
+
+    <div class="report-card">
+      <div class="card-head">
+        <div class="card-head-left">
+          <span class="material-symbols-outlined">inventory_2</span>
+          <h3>Produk Terlaris</h3>
+        </div>
+      </div>
+      @if (loading()) {
+        <p-skeleton height="280px" borderRadius="12px" />
+      } @else if (topProductsChart()) {
+        <div class="chart-wrap" style="height:280px">
+          <p-chart type="bar" [data]="topProductsChart()" [options]="barOptions" />
+        </div>
+      } @else {
+        <div class="no-data-wrap">
+          <span class="material-symbols-outlined no-data-icon">inventory_2</span>
+          <p class="no-data">Belum ada data produk terjual.</p>
+        </div>
+      }
+    </div>
+
+    <div class="report-card">
+      <div class="card-head">
+        <div class="card-head-left">
+          <span class="material-symbols-outlined">location_city</span>
+          <h3>Kota Tujuan Teratas</h3>
+        </div>
+      </div>
+      @if (loading()) {
+        <div class="city-list-skeleton">
+          @for (i of [1,2,3,4,5]; track i) {
+            <div class="city-row-sk">
+              <p-skeleton height="14px" width="24px" />
+              <p-skeleton height="14px" width="120px" />
+              <p-skeleton height="8px" [style]="{'flex':'1'}" />
+              <p-skeleton height="14px" width="60px" />
+            </div>
+          }
+        </div>
+      } @else if (topCities().length) {
+        <div class="city-list">
+          @for (city of topCities(); track city.city_name; let i = $index) {
+            <div class="city-row">
+              <span class="city-rank">{{ i + 1 }}</span>
+              <div class="city-info">
+                <span class="city-name">{{ city.city_name }}</span>
+                <div class="city-bar-wrap">
+                  <div
+                    class="city-bar"
+                    [style.width.%]="(city.order_count / maxCityOrders()) * 100"
+                  ></div>
+                </div>
+              </div>
+              <span class="city-count">{{ city.order_count }} order</span>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="no-data-wrap">
+          <span class="material-symbols-outlined no-data-icon">location_city</span>
+          <p class="no-data">Belum ada data kota tujuan.</p>
+        </div>
+      }
+    </div>
+
+  </div>
+
+</div>

@@ -15,6 +15,15 @@ interface NavGroup {
   items: NavItem[];
 }
 
+interface Notification {
+  id: string;
+  icon: string;
+  title: string;
+  message: string;
+  time: string;
+  read: boolean;
+}
+
 @Component({
   selector: 'app-layout',
   standalone: true,
@@ -26,9 +35,39 @@ export class LayoutComponent {
   private authService = inject(AuthService);
   private router      = inject(Router);
 
-  collapsed    = signal(false);
-  mobileOpen   = signal(false);
-  userMenuOpen = signal(false);
+  collapsed          = signal(false);
+  mobileOpen         = signal(false);
+  userMenuOpen       = signal(false);
+  notificationsOpen  = signal(false);
+
+  notifications = signal<Notification[]>([
+    {
+      id: '1',
+      icon: 'shopping_cart',
+      title: 'Pesanan Baru',
+      message: 'Order #12345 baru saja masuk dari WhatsApp',
+      time: '2 menit yang lalu',
+      read: false,
+    },
+    {
+      id: '2',
+      icon: 'inventory_2',
+      title: 'Stok Menipis',
+      message: 'Produk "Kopi Arabika" hampir habis (sisa 3 pcs)',
+      time: '1 jam yang lalu',
+      read: false,
+    },
+    {
+      id: '3',
+      icon: 'payments',
+      title: 'Pembayaran Diterima',
+      message: 'Pembayaran QRIS untuk order #12340 berhasil',
+      time: '3 jam yang lalu',
+      read: true,
+    },
+  ]);
+
+  notificationCount = computed(() => this.notifications().filter(n => !n.read).length);
 
   user = computed(() => {
     const raw = localStorage.getItem('user');
@@ -45,6 +84,7 @@ export class LayoutComponent {
         { label: 'Produk',     icon: 'inventory_2',   route: '/products' },
         { label: 'Pesanan',    icon: 'receipt_long',  route: '/orders' },
         { label: 'Pelanggan',  icon: 'people',        route: '/customers' },
+        { label: 'Laporan',    icon: 'bar_chart',     route: '/reports' },
       ],
     },
     {
@@ -69,11 +109,20 @@ export class LayoutComponent {
 
   toggleUserMenu(): void { this.userMenuOpen.update(v => !v); }
 
+  toggleNotifications(): void { this.notificationsOpen.update(v => !v); }
+
+  markAllAsRead(): void {
+    this.notifications.update(notifs => notifs.map(n => ({ ...n, read: true })));
+  }
+
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
     if (!target.closest('.user-menu-wrap')) {
       this.userMenuOpen.set(false);
+    }
+    if (!target.closest('.topbar-icon-btn') && !target.closest('.notification-dropdown')) {
+      this.notificationsOpen.set(false);
     }
   }
 
