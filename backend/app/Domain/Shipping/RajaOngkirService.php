@@ -91,11 +91,6 @@ class RajaOngkirService
             ->get();
     }
 
-    public function getCityById(string $cityId): ?ShippingCache
-    {
-        return ShippingCache::where('city_id', $cityId)->first();
-    }
-
     public function calculateShipping(string $origin, string $destination, int $weight): array
     {
         $response = Http::withHeaders([
@@ -129,19 +124,4 @@ class RajaOngkirService
         return [];
     }
 
-    public function trackWaybill(string $waybill, string $courier): array
-    {
-        $response = Http::withHeaders([
-            'key' => $this->apiKey
-        ])->post("{$this->baseUrl}/waybill", [
-            'waybill' => $waybill,
-            'courier' => strtolower($courier)
-        ]);
-
-        if ($response->successful()) {
-            return $response->json()['rajaongkir']['result'];
-        }
-
-        return [];
-    }
 }

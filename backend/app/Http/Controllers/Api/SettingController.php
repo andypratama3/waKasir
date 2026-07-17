@@ -86,7 +86,10 @@ class SettingController extends Controller
             return response()->json(['error' => 'No business associated with user'], 403);
         }
 
-        $subscription = $this->subscriptionService->getSubscriptionByBusiness($businessId);
+        $subscription = \App\Models\Subscription::where('business_id', $businessId)->first();
+        if (!$subscription) {
+            return response()->json(['error' => 'No subscription found'], 404);
+        }
         $quotaStatus = $this->subscriptionService->checkQuota($businessId);
         $planDetails = $this->subscriptionService->getPlanDetails($subscription->plan);
 
