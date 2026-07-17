@@ -78,7 +78,10 @@ export class OrdersListComponent implements OnInit {
       date_to:   this.filterTo(),
     }).subscribe({
       next: (data) => {
-        this.orders.set(data.orders ?? []);
+        // Backend returns Laravel paginator → data.data[] is the items array
+        // Fallback to flat data.orders for older responses
+        const items = data?.data ?? data?.orders ?? [];
+        this.orders.set(items);
         this.loading.set(false);
       },
       error: () => this.loading.set(false),

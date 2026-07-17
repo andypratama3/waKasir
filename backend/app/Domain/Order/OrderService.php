@@ -69,14 +69,6 @@ class OrderService
             ->first();
     }
 
-    public function getOrderByNumber(string $orderNumber, string $businessId): ?Order
-    {
-        return Order::with(['items.product', 'items.variant', 'customer', 'address', 'payment'])
-            ->where('order_number', $orderNumber)
-            ->where('business_id', $businessId)
-            ->first();
-    }
-
     /**
      * Get paginated orders for a business with optional filters.
      */

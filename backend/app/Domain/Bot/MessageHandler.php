@@ -27,8 +27,19 @@ class MessageHandler
         private OrderService    $orderService,
     ) {}
 
+    /** Maximum message length accepted from WhatsApp. Anything longer is truncated before processing. */
+    private const MAX_MESSAGE_LENGTH = 1000;
+
+    /** Minimum address length required before accepting it as valid. */
+    private const MIN_ADDRESS_LENGTH = 10;
+
+    /** Maximum address length stored to DB. */
+    private const MAX_ADDRESS_LENGTH = 500;
+
     public function handle(string $message, string $waNumber, string $businessId): array
     {
+        // ── Sanitize inbound message ─────────────────────────────────────
+        $message = $this->sanitizeInput($message, self::MAX_MESSAGE_LENGTH);
         $business     = Business::findOrFail($businessId);
         $customer     = $this->getOrCreateCustomer($waNumber, $businessId);
         $conversation = $this->getOrCreateConversation($customer->id);
@@ -101,6 +112,7 @@ class MessageHandler
             StateMachine::STATES['PAID_AWAITING_ADDRESS'] => $this->handlePaidAwaitingAddress($message, $conversation, $business),
             StateMachine::STATES['COMPLETED']          => $this->handleCompleted($intent, $conversation, $business, $outsideHours),
             StateMachine::STATES['EXPIRED']            => $this->handleExpired($message, $conversation, $business),
+            StateMachine::STATES['CHECKING_ORDER']     => $this->handleCheckingOrder($message, $conversation, $business),
             default                                    => $this->handleFallback($conversation),
         };
     }
@@ -131,9 +143,10 @@ class MessageHandler
         }
 
         if ($intent === 'check_order') {
+            $conversation->update(['current_state' => StateMachine::STATES['CHECKING_ORDER']]);
             return [
-                'text'  => "Silakan kirim nomor order Anda (format: ORD-YYYYMMDD-XXXX) untuk cek status pesanan.",
-                'state' => StateMachine::STATES['IDLE'],
+                'text'  => "Silakan kirim *nomor order* Anda (format: ORD-YYYYMMDD-XXXX):",
+                'state' => StateMachine::STATES['CHECKING_ORDER'],
             ];
         }
 
@@ -173,8 +186,11 @@ class MessageHandler
                 ];
             }
 
-            // Has variants?
-            $variants = $product->variants ?? $product->relationLoaded('variants') ? $product->variants : $product->load('variants')->variants;
+            // Has variants? Load explicitly to avoid ternary ambiguity
+            if (!$product->relationLoaded('variants')) {
+                $product->load('variants');
+            }
+            $variants = $product->variants;
 
             $cart = $conversation->cart_data ?? [];
             $cart['product_id']   = $product->id;
@@ -563,7 +579,9 @@ class MessageHandler
 
     private function handlePaidAwaitingAddress(string $message, Conversation $conversation, Business $business): array
     {
-        if (strlen(trim($message)) < 10) {
+        $message = $this->sanitizeInput($message, self::MAX_ADDRESS_LENGTH);
+
+        if (strlen(trim($message)) < self::MIN_ADDRESS_LENGTH) {
             return [
                 'text'  => "Mohon kirim alamat *lengkap* (nama jalan, nomor rumah, RT/RW, kelurahan, kota, kode pos):",
                 'state' => StateMachine::STATES['PAID_AWAITING_ADDRESS'],
@@ -642,6 +660,82 @@ class MessageHandler
         ];
     }
 
+    private function handleCheckingOrder(string $message, Conversation $conversation, Business $business): array
+    {
+        // Extract order number — accept "ORD-20260716-0001" or just "0001" or "#ORD-xxx"
+        $msg         = strtoupper(trim(ltrim($message, '#')));
+        $orderNumber = null;
+
+        // Full format match
+        if (preg_match('/ORD-\d{8}-\d{4}/', $msg, $m)) {
+            $orderNumber = $m[0];
+        }
+
+        // Always reset to IDLE after this interaction
+        $conversation->update(['current_state' => StateMachine::STATES['IDLE']]);
+
+        if (!$orderNumber) {
+            return [
+                'text'  => "Format nomor order tidak dikenali. Contoh yang benar: *ORD-20260716-0001*\n\nKetik *menu* untuk kembali ke menu utama.",
+                'state' => StateMachine::STATES['IDLE'],
+            ];
+        }
+
+        $customer = $conversation->customer;
+
+        $order = \App\Models\Order::with(['items.product', 'address', 'payment'])
+            ->where('order_number', $orderNumber)
+            ->where('business_id', $business->id)
+            ->where('customer_id', $customer?->id)
+            ->first();
+
+        if (!$order) {
+            return [
+                'text'  => "Order *#{$orderNumber}* tidak ditemukan.\n\nPastikan nomor order sudah benar, atau ketik *menu* untuk kembali.",
+                'state' => StateMachine::STATES['IDLE'],
+            ];
+        }
+
+        // Status label mapping
+        $statusLabels = [
+            'pending'    => '⏳ Menunggu Pembayaran',
+            'paid'       => '✅ Pembayaran Diterima',
+            'processing' => '🔄 Sedang Diproses',
+            'shipped'    => '🚚 Dalam Pengiriman',
+            'completed'  => '✅ Selesai',
+            'cancelled'  => '❌ Dibatalkan',
+            'expired'    => '⏰ Kedaluwarsa',
+            'refunded'   => '🔙 Direfund',
+        ];
+
+        $statusLabel = $statusLabels[$order->status] ?? ucfirst($order->status);
+        $total       = 'Rp' . number_format($order->total_amount, 0, ',', '.');
+        $courier     = trim(($order->courier_name ?? '') . ' ' . ($order->courier_service ?? ''));
+
+        $text = "📦 *Status Order #{$order->order_number}*\n\n"
+              . "Status: *{$statusLabel}*\n"
+              . "Total: *{$total}*\n";
+
+        if ($courier) {
+            $text .= "Kurir: {$courier}\n";
+        }
+
+        if ($order->tracking_number) {
+            $text .= "No. Resi: *{$order->tracking_number}*\n";
+        }
+
+        if ($order->address) {
+            $text .= "Tujuan: {$order->address->city_name}\n";
+        }
+
+        $text .= "\nKetik *menu* untuk kembali ke menu utama.";
+
+        return [
+            'text'  => $text,
+            'state' => StateMachine::STATES['IDLE'],
+        ];
+    }
+
     private function handleFallback(Conversation $conversation): array
     {
         $count = ($conversation->fallback_count ?? 0) + 1;
@@ -684,6 +778,17 @@ class MessageHandler
         );
     }
 
+    private function normalizeNumber(string $number): string
+    {
+        $n = preg_replace('/[^0-9]/', '', $number);
+        if (str_starts_with($n, '0')) {
+            $n = '62' . substr($n, 1);
+        } elseif (!str_starts_with($n, '62')) {
+            $n = '62' . $n;
+        }
+        return $n;
+    }
+
     private function isSessionExpired(Conversation $conversation): bool
     {
         if (!$conversation->last_activity_at) {
@@ -705,6 +810,35 @@ class MessageHandler
         $start = Carbon::createFromTimeString($hours['start'] ?? '08:00', $tz);
         $end   = Carbon::createFromTimeString($hours['end']   ?? '21:00', $tz);
 
+        // Handle overnight hours (e.g., 21:00–02:00)
+        if ($start->greaterThan($end)) {
+            return $now->between($end, $start);
+        }
+
         return !$now->between($start, $end);
+    }
+
+    /**
+     * Strip control characters, null bytes, and truncate to $maxLen.
+     * Does NOT HTML-encode — output is plain text stored in DB and
+     * sent as WhatsApp text, so htmlspecialchars would break emojis.
+     */
+    private function sanitizeInput(string $input, int $maxLen = 1000): string
+    {
+        // Remove null bytes and dangerous control chars (keep \n \t)
+        $cleaned = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $input);
+
+        if ($cleaned === null) {
+            $cleaned = $input;
+        }
+
+        // Collapse excessive blank lines (>2 consecutive newlines)
+        $cleaned = preg_replace('/\n{3,}/', "\n\n", $cleaned);
+
+        if ($cleaned === null) {
+            $cleaned = $input;
+        }
+
+        return mb_substr(trim($cleaned), 0, $maxLen);
     }
 }

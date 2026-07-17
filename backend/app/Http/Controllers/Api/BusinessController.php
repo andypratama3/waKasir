@@ -22,16 +22,21 @@ class BusinessController extends Controller
     public function show(Request $request): JsonResponse
     {
         $businessId = $request->user()->business_id;
-        
+
         if (!$businessId) {
             return response()->json(['error' => 'No business associated with user'], 403);
         }
 
         $business = $this->businessService->getBusinessById($businessId);
 
-        return response()->json([
-            'business' => $business,
-        ]);
+        // Add masked key indicators so frontend knows if credentials are set
+        // without ever returning the actual values (they're in $hidden on the model)
+        $businessData                              = $business->toArray();
+        $businessData['midtrans_server_key_masked'] = !empty($business->getRawOriginal('midtrans_server_key'));
+        $businessData['midtrans_client_key_masked'] = !empty($business->getRawOriginal('midtrans_client_key'));
+        $businessData['rajaongkir_api_key_masked']  = !empty($business->getRawOriginal('rajaongkir_api_key'));
+
+        return response()->json(['business' => $businessData]);
     }
 
     public function update(Request $request): JsonResponse
@@ -84,21 +89,6 @@ class BusinessController extends Controller
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
-    }
-
-    public function stats(Request $request): JsonResponse
-    {
-        $businessId = $request->user()->business_id;
-        
-        if (!$businessId) {
-            return response()->json(['error' => 'No business associated with user'], 403);
-        }
-
-        $stats = $this->businessService->getBusinessStats($businessId);
-
-        return response()->json([
-            'stats' => $stats,
-        ]);
     }
 
     // ── WhatsApp BSP Endpoints ───────────────────────────────────────────

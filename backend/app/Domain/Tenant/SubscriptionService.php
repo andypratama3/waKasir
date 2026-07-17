@@ -8,35 +8,6 @@ use Carbon\Carbon;
 
 class SubscriptionService
 {
-    public function createSubscription(array $data, string $businessId): Subscription
-    {
-        return Subscription::create([
-            'business_id' => $businessId,
-            'plan' => $data['plan'],
-            'quota_conversation' => $this->getPlanQuota($data['plan']),
-            'quota_used' => 0,
-            'max_products' => $this->getPlanMaxProducts($data['plan']),
-            'renewed_at' => now(),
-            'ends_at' => now()->addMonth(),
-            'status' => 'active',
-        ]);
-    }
-
-    public function updateSubscription(string $subscriptionId, array $data): Subscription
-    {
-        $subscription = Subscription::findOrFail($subscriptionId);
-
-        $subscription->update([
-            'plan' => $data['plan'] ?? $subscription->plan,
-            'quota_conversation' => $data['quota_conversation'] ?? $subscription->quota_conversation,
-            'max_products' => $data['max_products'] ?? $subscription->max_products,
-            'ends_at' => $data['ends_at'] ?? $subscription->ends_at,
-            'status' => $data['status'] ?? $subscription->status,
-        ]);
-
-        return $subscription->fresh();
-    }
-
     public function upgradePlan(string $businessId, string $newPlan): Subscription
     {
         $business = Business::findOrFail($businessId);
@@ -59,6 +30,10 @@ class SubscriptionService
         $business = Business::with('subscription')->findOrFail($businessId);
         $subscription = $business->subscription;
 
+        if (!$subscription) {
+            return false; // No subscription record — treat as exceeded
+        }
+
         if ($subscription->quota_used >= $subscription->quota_conversation) {
             return false; // Quota exceeded
         }
@@ -72,8 +47,21 @@ class SubscriptionService
         $business = Business::with('subscription')->findOrFail($businessId);
         $subscription = $business->subscription;
 
+        if (!$subscription) {
+            return [
+                'used' => 0,
+                'total' => 0,
+                'remaining' => 0,
+                'percentage' => 100,
+                'is_exceeded' => true,
+                'is_near_limit' => true,
+            ];
+        }
+
         $remaining = $subscription->quota_conversation - $subscription->quota_used;
-        $percentage = ($subscription->quota_used / $subscription->quota_conversation) * 100;
+        $percentage = $subscription->quota_conversation > 0
+            ? ($subscription->quota_used / $subscription->quota_conversation) * 100
+            : 100;
 
         return [
             'used' => $subscription->quota_used,
@@ -85,44 +73,13 @@ class SubscriptionService
         ];
     }
 
-    public function renewSubscription(string $subscriptionId): Subscription
-    {
-        $subscription = Subscription::findOrFail($subscriptionId);
-
-        $subscription->update([
-            'quota_used' => 0,
-            'renewed_at' => now(),
-            'ends_at' => now()->addMonth(),
-            'status' => 'active',
-        ]);
-
-        return $subscription->fresh();
-    }
-
-    public function cancelSubscription(string $subscriptionId): Subscription
-    {
-        $subscription = Subscription::findOrFail($subscriptionId);
-
-        $subscription->update([
-            'status' => 'cancelled',
-            'ends_at' => now(), // End immediately
-        ]);
-
-        return $subscription->fresh();
-    }
-
-    public function getSubscriptionByBusiness(string $businessId): Subscription
-    {
-        return Subscription::where('business_id', $businessId)->firstOrFail();
-    }
-
     public function checkProductLimit(string $businessId): bool
     {
         $business = Business::with('subscription', 'products')->findOrFail($businessId);
         $subscription = $business->subscription;
         $productCount = $business->products()->where('is_active', true)->count();
 
-        if ($subscription->max_products === -1) {
+        if (!$subscription || $subscription->max_products === -1) {
             return true; // Unlimited
         }
 

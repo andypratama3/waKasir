@@ -45,7 +45,7 @@
           <span class="material-symbols-outlined icon-sm filled">workspace_premium</span>
           <div class="plan-info">
             <span class="plan-label">Paket aktif</span>
-            <span class="plan-name">{{ business()?.subscription_plan ?? 'Starter' | titlecase }}</span>
+            <span class="plan-name">{{ (business()?.subscription_plan ?? 'Starter') | titlecase }}</span>
           </div>
         </div>
       } @else {

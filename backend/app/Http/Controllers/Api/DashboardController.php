@@ -52,8 +52,24 @@ class DashboardController extends Controller
 
         $weeklyRevenue = $weeklyOrders->whereIn('status', ['paid', 'completed'])->sum('total_amount');
 
-        // Get recent orders
-        $recentOrders = $this->orderService->getOrdersByBusiness($businessId, ['limit' => 5]);
+        // Get recent orders (flat, not paginated — dashboard only needs last 10)
+        $recentOrders = \App\Models\Order::with(['customer', 'payment'])
+            ->where('business_id', $businessId)
+            ->orderByDesc('created_at')
+            ->limit(10)
+            ->get()
+            ->map(fn ($o) => [
+                'id'           => $o->id,
+                'order_number' => $o->order_number,
+                'total_amount' => (float) $o->total_amount,
+                'status'       => $o->status,
+                'created_at'   => $o->created_at,
+                'customer'     => $o->customer ? [
+                    'id'        => $o->customer->id,
+                    'name'      => $o->customer->name,
+                    'wa_number' => $o->customer->wa_number,
+                ] : null,
+            ]);
 
         // Get low stock products
         $lowStockProducts = \App\Models\Product::where('business_id', $businessId)
@@ -114,7 +130,7 @@ class DashboardController extends Controller
         $startDate = now()->subDays($days);
         
         $orders = \App\Models\Order::where('business_id', $businessId)
-            ->where('status', 'completed')
+            ->whereIn('status', ['paid', 'completed'])
             ->where('created_at', '>=', $startDate)
             ->selectRaw('DATE(created_at) as date, SUM(total_amount) as revenue, COUNT(*) as orders')
             ->groupBy('date')

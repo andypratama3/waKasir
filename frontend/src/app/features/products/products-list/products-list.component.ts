@@ -76,8 +76,10 @@ export class ProductsListComponent implements OnInit {
     this.loading.set(true);
     this.productsService.getProducts().subscribe({
       next: (data) => {
-        this.products.set(data.products ?? []);
-        this.filtered.set(data.products ?? []);
+        // Backend may return flat {products:[]} or paginated {data:[]}
+        const items = data?.products ?? data?.data ?? [];
+        this.products.set(items);
+        this.filtered.set(items);
         this.loading.set(false);
       },
       error: () => this.loading.set(false),

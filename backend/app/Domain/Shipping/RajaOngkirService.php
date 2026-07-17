@@ -11,10 +11,19 @@ class RajaOngkirService
     private string $baseUrl;
     private string $apiKey;
 
-    public function __construct()
+    public function __construct(string $apiKey = '')
     {
         $this->baseUrl = config('services.rajaongkir.base_url', 'https://api.rajaongkir.com/starter');
-        $this->apiKey = config('services.rajaongkir.api_key', '');
+        // Accept injected key (per-business) or fall back to global config
+        $this->apiKey  = $apiKey ?: config('services.rajaongkir.api_key', '');
+    }
+
+    /**
+     * Create a per-business instance using the business's decrypted API key.
+     */
+    public static function forBusiness(\App\Models\Business $business): self
+    {
+        return new self($business->getRajaOngkirApiKeyDecrypted() ?? '');
     }
 
     public function getProvinces(): array

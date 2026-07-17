@@ -568,8 +568,8 @@ message_logs
 
 ### V2 — Setelah 3–5 toko aktif & tervalidasi
 
-- [ ] Embedded Signup self-service (butuh approve Meta)
-- [ ] WhatsAppService per-business token di SendWhatsAppNotification
+- [x] Embedded Signup self-service (butuh approve Meta — flow sudah diimplementasi, menunggu Meta review)
+- [x] WhatsAppService per-business token di SendWhatsAppNotification
 - [ ] Import produk massal Excel
 - [ ] Template Message Meta (daftar + kirim dari dashboard)
 - [ ] Refund otomatis via Midtrans API

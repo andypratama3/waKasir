@@ -17,10 +17,12 @@ class StateMachine
         'COMPLETED'             => 'COMPLETED',
         'EXPIRED'               => 'EXPIRED',
         'FALLBACK_CS'           => 'FALLBACK_CS',
+        'CHECKING_ORDER'        => 'CHECKING_ORDER',   // waiting for customer to type their order number
     ];
 
     private static array $transitions = [
-        'IDLE'                  => ['BROWSING', 'FALLBACK_CS'],
+        'IDLE'                  => ['BROWSING', 'CHECKING_ORDER', 'FALLBACK_CS'],
+        'CHECKING_ORDER'        => ['IDLE'],
         'BROWSING'              => ['SELECTING_VARIANT', 'SELECTING_QTY', 'CART_REVIEW', 'IDLE'],
         'SELECTING_VARIANT'     => ['SELECTING_QTY', 'BROWSING'],
         'SELECTING_QTY'         => ['CART_REVIEW', 'BROWSING'],
@@ -33,11 +35,6 @@ class StateMachine
         'EXPIRED'               => ['AWAITING_PAYMENT', 'IDLE'],
         'FALLBACK_CS'           => ['IDLE'],
     ];
-
-    public static function canTransition(string $from, string $to): bool
-    {
-        return in_array($to, self::$transitions[$from] ?? [], true);
-    }
 
     public static function getInitialState(): string
     {

@@ -30,7 +30,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   selectedPeriod = signal<Period>('7d');
 
   /** Badge: new pending orders detected since last poll */
-  newOrderCount  = signal(0);
   private lastKnownPendingCount = 0;
 
   chartData    = signal<any>(null);
@@ -82,11 +81,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     catch { return 'Pemilik Toko'; }
   });
 
-  businessName = computed(() => {
-    try { return JSON.parse(localStorage.getItem('user') ?? '{}')?.business?.name ?? ''; }
-    catch { return ''; }
-  });
-
   greeting = computed(() => {
     const h = new Date().getHours();
     if (h < 11) return 'Selamat pagi';
@@ -123,9 +117,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.dashService.liveStats$.pipe(takeUntil(this.destroy$)).subscribe({
       next: (d) => {
         const incomingPending = (d.stats?.orders_by_status?.pending ?? 0) + (d.stats?.orders_by_status?.paid ?? 0);
-        if (this.lastKnownPendingCount > 0 && incomingPending > this.lastKnownPendingCount) {
-          this.newOrderCount.update(n => n + (incomingPending - this.lastKnownPendingCount));
-        }
         this.lastKnownPendingCount = incomingPending;
         this.stats.set(d.stats);
         this.recentOrders.set(d.recent_orders ?? []);
@@ -144,8 +135,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
   }
-
-  clearNewOrderBadge(): void { this.newOrderCount.set(0); }
 
   loadChart(period: Period): void {
     this.selectedPeriod.set(period);

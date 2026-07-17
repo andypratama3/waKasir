@@ -44,34 +44,37 @@ class BusinessService
     public function updateBusiness(string $businessId, array $data): Business
     {
         $business = Business::findOrFail($businessId);
-        
-        $business->update([
-            'name' => $data['name'] ?? $business->name,
-            'wa_phone_id' => $data['wa_phone_id'] ?? $business->wa_phone_id,
-            'wa_phone_number' => $data['wa_phone_number'] ?? $business->wa_phone_number,
-            'midtrans_server_key' => $data['midtrans_server_key'] ?? $business->midtrans_server_key,
-            'midtrans_client_key' => $data['midtrans_client_key'] ?? $business->midtrans_client_key,
-            'midtrans_merchant_id' => $data['midtrans_merchant_id'] ?? $business->midtrans_merchant_id,
-            'rajaongkir_api_key' => $data['rajaongkir_api_key'] ?? $business->rajaongkir_api_key,
-            'origin_city_id' => $data['origin_city_id'] ?? $business->origin_city_id,
-            'origin_subdistrict_id' => $data['origin_subdistrict_id'] ?? $business->origin_subdistrict_id,
-            'origin_address' => $data['origin_address'] ?? $business->origin_address,
-            'bot_settings' => $data['bot_settings'] ?? $business->bot_settings,
-            'operating_hours' => $data['operating_hours'] ?? $business->operating_hours,
-        ]);
 
+        $updates = array_filter([
+            'name'             => $data['name']             ?? null,
+            'wa_phone_id'      => $data['wa_phone_id']      ?? null,
+            'wa_phone_number'  => $data['wa_phone_number']  ?? null,
+            'origin_city_id'   => $data['origin_city_id']   ?? null,
+            'origin_subdistrict_id' => $data['origin_subdistrict_id'] ?? null,
+            'origin_address'   => $data['origin_address']   ?? null,
+            'bot_settings'     => $data['bot_settings']     ?? null,
+            'operating_hours'  => $data['operating_hours']  ?? null,
+            'midtrans_merchant_id' => $data['midtrans_merchant_id'] ?? null,
+        ], fn ($v) => $v !== null);
+
+        // Encrypt sensitive keys before storing
+        if (!empty($data['midtrans_server_key'])) {
+            $updates['midtrans_server_key'] = encrypt($data['midtrans_server_key']);
+        }
+        if (!empty($data['midtrans_client_key'])) {
+            $updates['midtrans_client_key'] = encrypt($data['midtrans_client_key']);
+        }
+        if (!empty($data['rajaongkir_api_key'])) {
+            $updates['rajaongkir_api_key'] = encrypt($data['rajaongkir_api_key']);
+        }
+
+        $business->update($updates);
         return $business->fresh();
     }
 
     public function getBusinessById(string $businessId): Business
     {
         return Business::with(['subscription', 'users', 'products', 'orders'])->findOrFail($businessId);
-    }
-
-    public function getBusinessByUserId(string $userId): ?Business
-    {
-        $user = User::with('business')->find($userId);
-        return $user?->business;
     }
 
     public function updateIntegration(string $businessId, string $integration, array $credentials): Business
@@ -84,12 +87,15 @@ class BusinessService
                 'wa_phone_number' => $credentials['wa_phone_number']  ?? $credentials['phone_number'] ?? null,
             ]),
             'midtrans' => array_filter([
-                'midtrans_server_key'  => $credentials['server_key']       ?? null,
-                'midtrans_client_key'  => $credentials['client_key']       ?? null,
+                'midtrans_server_key'  => isset($credentials['server_key'])
+                    ? encrypt($credentials['server_key']) : null,
+                'midtrans_client_key'  => isset($credentials['client_key'])
+                    ? encrypt($credentials['client_key']) : null,
                 'midtrans_merchant_id' => $credentials['midtrans_merchant_id'] ?? $credentials['merchant_id'] ?? null,
             ]),
             'rajaongkir' => array_filter([
-                'rajaongkir_api_key'   => $credentials['api_key']          ?? null,
+                'rajaongkir_api_key'   => isset($credentials['api_key'])
+                    ? encrypt($credentials['api_key']) : null,
                 'origin_city_id'       => $credentials['origin_city_id']   ?? null,
                 'origin_address'       => $credentials['origin_address']   ?? null,
             ]),
@@ -106,15 +112,17 @@ class BusinessService
         $business = Business::with(['products', 'orders', 'customers', 'subscription'])->findOrFail($businessId);
 
         return [
-            'products_count' => $business->products()->where('is_active', true)->count(),
-            'orders_count' => $business->orders()->count(),
+            'products_count'  => $business->products()->where('is_active', true)->count(),
+            'orders_count'    => $business->orders()->count(),
             'customers_count' => $business->customers()->count(),
-            'revenue' => $business->orders()->where('status', 'completed')->sum('total_amount'),
-            'subscription' => [
-                'plan' => $business->subscription->plan,
-                'quota_used' => $business->subscription->quota_used,
-                'quota_total' => $business->subscription->quota_conversation,
-                'ends_at' => $business->subscription->ends_at,
+            'revenue'         => (float) $business->orders()->whereIn('status', ['paid', 'completed'])->sum('total_amount'),
+            'subscription'    => [
+                'plan'               => $business->subscription?->plan,
+                'quota_used'         => $business->subscription?->quota_used ?? 0,
+                'quota_conversation' => $business->subscription?->quota_conversation ?? 0,
+                'max_products'       => $business->subscription?->max_products ?? 0,
+                'ends_at'            => $business->subscription?->ends_at,
+                'status'             => $business->subscription?->status,
             ],
         ];
     }

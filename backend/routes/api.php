@@ -31,12 +31,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Products — specific routes BEFORE apiResource to avoid route shadowing
     Route::get('/products/search',              [ProductController::class, 'search']);
-    Route::get('/products/category/{category}', [ProductController::class, 'byCategory']);
     Route::apiResource('products', ProductController::class);
 
     // Orders — specific routes BEFORE apiResource
     Route::get('/orders/stats',          [OrderController::class, 'stats']);
-    Route::apiResource('orders', OrderController::class)->except(['store', 'create']);
+    Route::apiResource('orders', OrderController::class)->only(['index', 'show']);
     Route::post('/orders/{id}/status',   [OrderController::class, 'updateStatus']);
     Route::post('/orders/{id}/tracking', [OrderController::class, 'updateTracking']);
     Route::post('/orders/{id}/cancel',   [OrderController::class, 'cancel']);
@@ -55,20 +54,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/business',                               [BusinessController::class, 'show']);
     Route::put('/business',                               [BusinessController::class, 'update']);
     Route::put('/business/integration/{integration}',     [BusinessController::class, 'updateIntegration']);
-    Route::get('/business/stats',                         [BusinessController::class, 'stats']);
 
     // WhatsApp BSP — Embedded Signup & status
-    Route::post('/business/whatsapp/connect',     [BusinessController::class, 'connectWhatsApp']);
-    Route::get('/business/whatsapp/status',       [BusinessController::class, 'waStatus']);
-    Route::delete('/business/whatsapp/disconnect',[BusinessController::class, 'disconnectWhatsApp']);
+    Route::post('/business/whatsapp/connect',      [BusinessController::class, 'connectWhatsApp'])->middleware('throttle:5,10');
+    Route::get('/business/whatsapp/status',        [BusinessController::class, 'waStatus']);
+    Route::delete('/business/whatsapp/disconnect', [BusinessController::class, 'disconnectWhatsApp']);
 
     // Settings
     Route::get('/settings/bot',                     [SettingController::class, 'botSettings']);
     Route::put('/settings/bot',                     [SettingController::class, 'updateBotSettings']);
     Route::get('/settings/subscription',            [SettingController::class, 'subscription']);
     Route::post('/settings/subscription/upgrade',   [SettingController::class, 'upgradeSubscription']);
-    Route::get('/settings/categories',              [SettingController::class, 'categories']);
-    Route::get('/settings/plans',                   [SettingController::class, 'plans']);
 });
 
 // ── Webhook routes (no auth, rate-limited) ───────────────────────────────

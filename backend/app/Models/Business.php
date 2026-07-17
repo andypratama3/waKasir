@@ -59,6 +59,35 @@ class Business extends Model
         }
     }
 
+    /** Returns decrypted Midtrans server key, or null. */
+    public function getMidtransServerKeyDecrypted(): ?string
+    {
+        return $this->decryptField($this->midtrans_server_key);
+    }
+
+    /** Returns decrypted Midtrans client key, or null. */
+    public function getMidtransClientKeyDecrypted(): ?string
+    {
+        return $this->decryptField($this->midtrans_client_key);
+    }
+
+    /** Returns decrypted RajaOngkir API key, or null. */
+    public function getRajaOngkirApiKeyDecrypted(): ?string
+    {
+        return $this->decryptField($this->rajaongkir_api_key);
+    }
+
+    private function decryptField(?string $value): ?string
+    {
+        if (!$value) return null;
+        try {
+            return decrypt($value);
+        } catch (\Throwable) {
+            // Value might be plain-text (pre-migration) — return as-is
+            return $value;
+        }
+    }
+
     public function users(): HasMany
     {
         return $this->hasMany(User::class);

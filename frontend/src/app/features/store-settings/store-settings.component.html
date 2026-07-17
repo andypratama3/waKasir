@@ -11,21 +11,25 @@
   </div>
 
   <div class="settings-grid">
-    <!-- Tabs sidebar -->
+
+    <!-- ── Tabs sidebar ─────────────────────────────────────────────── -->
     <div class="tabs-sidebar card">
       @for (tab of tabs; track tab.label; let i = $index) {
         <button class="tab-btn" [class.active]="activeTab() === i" (click)="setTab(i)">
           <span class="material-symbols-outlined">{{ tab.icon }}</span>
           <span>{{ tab.label }}</span>
+          @if (i === 1 && waConnected) {
+            <span class="badge-connected" title="Terhubung">●</span>
+          }
           <span class="material-symbols-outlined chevron">chevron_right</span>
         </button>
       }
     </div>
 
-    <!-- Tab content -->
+    <!-- ── Tab content ──────────────────────────────────────────────── -->
     <div class="tab-content">
 
-      <!-- ── Tab 0: Profil Toko ── -->
+      <!-- ══ Tab 0: Profil Toko ══════════════════════════════════════════ -->
       @if (activeTab() === 0) {
         <div class="card settings-card" [formGroup]="profileForm">
           <div class="card-inner-header">
@@ -35,6 +39,7 @@
               <p>Informasi dasar toko Anda</p>
             </div>
           </div>
+
           <div class="form-group">
             <label>Nama Toko</label>
             <div class="input-icon-wrap">
@@ -42,85 +47,135 @@
               <input type="text" formControlName="name" placeholder="Nama toko Anda" />
             </div>
           </div>
+
           @if (business) {
             <div class="status-row">
-              <div class="status-info">
-                <span>Status Akun</span>
-                <span class="status-badge" [class.status-completed]="business.status === 'active'" [class.status-cancelled]="business.status !== 'active'">
-                  <span class="status-dot"></span>
-                  {{ business.status === 'active' ? 'Aktif' : 'Nonaktif' }}
-                </span>
-              </div>
+              <span>Status Akun</span>
+              <span class="status-badge"
+                [class.status-completed]="business.status === 'active'"
+                [class.status-cancelled]="business.status !== 'active'">
+                <span class="status-dot"></span>
+                {{ business.status === 'active' ? 'Aktif' : 'Nonaktif' }}
+              </span>
             </div>
           }
+
           <div class="form-actions">
             <button class="btn btn-primary" [disabled]="savingProfile()" (click)="saveProfile()">
-              @if (savingProfile()) { <span class="material-symbols-outlined spinning">progress_activity</span> Menyimpan... }
-              @else { <span class="material-symbols-outlined">save</span> Simpan Profil }
+              @if (savingProfile()) {
+                <span class="material-symbols-outlined spinning">progress_activity</span> Menyimpan...
+              } @else {
+                <span class="material-symbols-outlined">save</span> Simpan Profil
+              }
             </button>
           </div>
         </div>
       }
 
-      <!-- ── Tab 1: WhatsApp ── -->
+      <!-- ══ Tab 1: WhatsApp (Embedded Signup) ════════════════════════════ -->
       @if (activeTab() === 1) {
-        <div class="card settings-card" [formGroup]="waForm">
+        <div class="card settings-card">
           <div class="card-inner-header">
             <span class="material-symbols-outlined icon-wa">chat</span>
             <div>
               <h3>Integrasi WhatsApp Business</h3>
-              <p>Hubungkan nomor WhatsApp Business API Anda</p>
+              <p>Hubungkan nomor WhatsApp Business Anda dengan satu klik</p>
             </div>
           </div>
 
-          @if (business?.wa_phone_number) {
-            <div class="connection-status connected">
-              <span class="material-symbols-outlined filled">check_circle</span>
-              Terhubung: {{ business.wa_phone_number }}
-            </div>
-          } @else {
-            <div class="connection-status disconnected">
-              <span class="material-symbols-outlined">cancel</span>
-              Belum terhubung
+          <!-- Loading skeleton -->
+          @if (waLoading()) {
+            <div class="wa-status-skeleton">
+              <p-skeleton height="80px" borderRadius="12px" />
             </div>
           }
 
-          <div class="form-group">
-            <label>Nomor WhatsApp Business</label>
-            <div class="input-icon-wrap">
-              <span class="material-symbols-outlined">phone</span>
-              <input type="text" formControlName="wa_phone_number" placeholder="628123456789" />
+          <!-- ── CONNECTED state ─────────────────────────────────────── -->
+          @else if (waConnected) {
+            <div class="wa-connected-card">
+              <div class="wa-connected-icon">
+                <span class="material-symbols-outlined filled">check_circle</span>
+              </div>
+              <div class="wa-connected-info">
+                <div class="wa-connected-name">{{ waStatus()?.verified_name ?? 'WhatsApp Terhubung' }}</div>
+                <div class="wa-connected-number">{{ waStatus()?.phone_number }}</div>
+                <div class="wa-connected-meta">
+                  WABA ID: {{ waStatus()?.waba_id ?? '—' }}
+                </div>
+              </div>
+              @if (waStatus()?.quality_rating) {
+                <div class="quality-badge" [class]="qualityClass(waStatus()?.quality_rating ?? null)">
+                  <span class="material-symbols-outlined">signal_cellular_alt</span>
+                  {{ waStatus()?.quality_rating }}
+                </div>
+              }
             </div>
-            <span class="form-hint">Format: 628xxx (tanpa + atau spasi)</span>
-          </div>
 
-          <div class="form-group">
-            <label>WhatsApp Phone Number ID</label>
-            <div class="input-icon-wrap">
-              <span class="material-symbols-outlined">tag</span>
-              <input type="text" formControlName="wa_phone_id" placeholder="123456789012345" />
+            <!-- Token expiry warning -->
+            <div class="token-expiry-row" [class.token-warn]="(waStatus()?.token_expires_at) !== null">
+              <span class="material-symbols-outlined">schedule</span>
+              <span>{{ tokenExpiresLabel }}</span>
             </div>
-            <span class="form-hint">Dapat ditemukan di Meta Business Manager → WhatsApp Manager</span>
-          </div>
 
-          <div class="info-callout">
-            <span class="material-symbols-outlined">info</span>
-            <div>
-              Anda memerlukan <strong>akun Meta Business</strong> dan nomor WhatsApp Business API aktif.
-              <a href="https://business.facebook.com" target="_blank" class="link">Buka Meta Business Manager →</a>
+            <!-- Actions -->
+            <div class="wa-actions">
+              <button class="btn btn-outline" (click)="refreshWaStatus()">
+                <span class="material-symbols-outlined">refresh</span> Refresh Status
+              </button>
+              <button class="btn btn-danger" [disabled]="waDisconnecting()" (click)="disconnectWhatsApp()">
+                @if (waDisconnecting()) {
+                  <span class="material-symbols-outlined spinning">progress_activity</span> Memutus...
+                } @else {
+                  <span class="material-symbols-outlined">link_off</span> Putus Koneksi
+                }
+              </button>
             </div>
-          </div>
+          }
 
-          <div class="form-actions">
-            <button class="btn btn-primary" [disabled]="savingWa()" (click)="saveWa()">
-              @if (savingWa()) { <span class="material-symbols-outlined spinning">progress_activity</span> Menyimpan... }
-              @else { <span class="material-symbols-outlined">save</span> Simpan Integrasi }
-            </button>
-          </div>
+          <!-- ── NOT CONNECTED state ─────────────────────────────────── -->
+          @else {
+            <div class="wa-not-connected">
+              <div class="wa-not-connected-icon">
+                <span class="material-symbols-outlined">phonelink_off</span>
+              </div>
+              <h4>Belum Terhubung</h4>
+              <p>
+                Hubungkan nomor WhatsApp Business Anda dengan klik tombol di bawah.
+                Tidak perlu buka Meta Business Manager — cukup login dengan akun Facebook Anda.
+              </p>
+
+              <div class="embedded-signup-steps">
+                <div class="step"><span class="step-num">1</span> Klik "Hubungkan WhatsApp"</div>
+                <div class="step"><span class="step-num">2</span> Login ke akun Facebook Anda</div>
+                <div class="step"><span class="step-num">3</span> Pilih nomor WA Business</div>
+                <div class="step"><span class="step-num">4</span> Selesai — bot langsung aktif</div>
+              </div>
+
+              <button
+                class="btn btn-wa-connect"
+                [disabled]="waConnecting()"
+                (click)="launchEmbeddedSignup()"
+              >
+                @if (waConnecting()) {
+                  <span class="material-symbols-outlined spinning">progress_activity</span>
+                  Menghubungkan...
+                } @else {
+                  <span class="material-symbols-outlined">link</span>
+                  Hubungkan WhatsApp
+                }
+              </button>
+
+              <p class="wa-privacy-note">
+                <span class="material-symbols-outlined">lock</span>
+                Token disimpan terenkripsi. Kami tidak menyimpan password Facebook Anda.
+              </p>
+            </div>
+          }
+
         </div>
       }
 
-      <!-- ── Tab 2: Midtrans ── -->
+      <!-- ══ Tab 2: Midtrans ════════════════════════════════════════════== -->
       @if (activeTab() === 2) {
         <div class="card settings-card" [formGroup]="midtransForm">
           <div class="card-inner-header">
@@ -131,7 +186,6 @@
             </div>
           </div>
 
-          <!-- Environment -->
           <div class="env-selector">
             <button class="env-btn" [class.active]="midtransEnv() === 'sandbox'" (click)="midtransEnv.set('sandbox')">
               <span class="material-symbols-outlined">science</span> Sandbox
@@ -145,7 +199,9 @@
             <label>Server Key</label>
             <div class="input-icon-wrap has-eye">
               <span class="material-symbols-outlined">key</span>
-              <input [type]="showMidtransServer() ? 'text' : 'password'" formControlName="midtrans_server_key" placeholder="SB-Mid-server-xxxx atau Mid-server-xxxx" />
+              <input [type]="showMidtransServer() ? 'text' : 'password'"
+                formControlName="midtrans_server_key"
+                placeholder="SB-Mid-server-xxxx atau Mid-server-xxxx" />
               <button type="button" class="eye-btn" (click)="showMidtransServer.update(v => !v)">
                 <span class="material-symbols-outlined">{{ showMidtransServer() ? 'visibility_off' : 'visibility' }}</span>
               </button>
@@ -156,7 +212,9 @@
             <label>Client Key</label>
             <div class="input-icon-wrap has-eye">
               <span class="material-symbols-outlined">vpn_key</span>
-              <input [type]="showMidtransClient() ? 'text' : 'password'" formControlName="midtrans_client_key" placeholder="SB-Mid-client-xxxx" />
+              <input [type]="showMidtransClient() ? 'text' : 'password'"
+                formControlName="midtrans_client_key"
+                placeholder="SB-Mid-client-xxxx" />
               <button type="button" class="eye-btn" (click)="showMidtransClient.update(v => !v)">
                 <span class="material-symbols-outlined">{{ showMidtransClient() ? 'visibility_off' : 'visibility' }}</span>
               </button>
@@ -174,20 +232,24 @@
           <div class="info-callout">
             <span class="material-symbols-outlined">info</span>
             <div>
-              Credentials dapat ditemukan di <a href="https://dashboard.midtrans.com" target="_blank" class="link">Midtrans Dashboard</a> → Settings → Access Keys
+              Credentials di <a href="https://dashboard.midtrans.com" target="_blank" class="link">Midtrans Dashboard</a>
+              → Settings → Access Keys. Gunakan mode <strong>Production</strong> untuk transaksi nyata.
             </div>
           </div>
 
           <div class="form-actions">
             <button class="btn btn-primary" [disabled]="savingMidtrans()" (click)="saveMidtrans()">
-              @if (savingMidtrans()) { <span class="material-symbols-outlined spinning">progress_activity</span> Menyimpan... }
-              @else { <span class="material-symbols-outlined">save</span> Simpan Integrasi }
+              @if (savingMidtrans()) {
+                <span class="material-symbols-outlined spinning">progress_activity</span> Menyimpan...
+              } @else {
+                <span class="material-symbols-outlined">save</span> Simpan Integrasi
+              }
             </button>
           </div>
         </div>
       }
 
-      <!-- ── Tab 3: RajaOngkir ── -->
+      <!-- ══ Tab 3: RajaOngkir ═════════════════════════════════════════════ -->
       @if (activeTab() === 3) {
         <div class="card settings-card" [formGroup]="rajaOngkirForm">
           <div class="card-inner-header">
@@ -202,7 +264,9 @@
             <label>API Key RajaOngkir</label>
             <div class="input-icon-wrap has-eye">
               <span class="material-symbols-outlined">key</span>
-              <input [type]="showRajaOngkirKey() ? 'text' : 'password'" formControlName="rajaongkir_api_key" placeholder="API Key dari rajaongkir.com" />
+              <input [type]="showRajaOngkirKey() ? 'text' : 'password'"
+                formControlName="rajaongkir_api_key"
+                placeholder="API Key dari rajaongkir.com" />
               <button type="button" class="eye-btn" (click)="showRajaOngkirKey.update(v => !v)">
                 <span class="material-symbols-outlined">{{ showRajaOngkirKey() ? 'visibility_off' : 'visibility' }}</span>
               </button>
@@ -214,8 +278,9 @@
               <label>Kota Asal (Origin)</label>
               <div class="input-icon-wrap">
                 <span class="material-symbols-outlined">location_city</span>
-                <input type="text" formControlName="origin_city_id" placeholder="Nama atau ID kota asal" />
+                <input type="text" formControlName="origin_city_id" placeholder="ID kota (dari shipping:seed)" />
               </div>
+              <span class="form-hint">Gunakan ID kota dari tabel shipping_cache</span>
             </div>
             <div class="form-group">
               <label>Alamat Toko Lengkap</label>
@@ -226,13 +291,14 @@
             </div>
           </div>
 
-          <!-- Couriers -->
           <div class="form-group">
             <label>Kurir Aktif</label>
             <div class="courier-grid">
               @for (courier of availableCouriers; track courier) {
                 <div class="courier-item" [class.active]="isCourierActive(courier)" (click)="toggleCourier(courier)">
-                  <span class="material-symbols-outlined">{{ isCourierActive(courier) ? 'check_circle' : 'radio_button_unchecked' }}</span>
+                  <span class="material-symbols-outlined">
+                    {{ isCourierActive(courier) ? 'check_circle' : 'radio_button_unchecked' }}
+                  </span>
                   {{ courier }}
                 </div>
               }
@@ -241,8 +307,11 @@
 
           <div class="form-actions">
             <button class="btn btn-primary" [disabled]="savingRajaOngkir()" (click)="saveRajaOngkir()">
-              @if (savingRajaOngkir()) { <span class="material-symbols-outlined spinning">progress_activity</span> Menyimpan... }
-              @else { <span class="material-symbols-outlined">save</span> Simpan Integrasi }
+              @if (savingRajaOngkir()) {
+                <span class="material-symbols-outlined spinning">progress_activity</span> Menyimpan...
+              } @else {
+                <span class="material-symbols-outlined">save</span> Simpan Integrasi
+              }
             </button>
           </div>
         </div>

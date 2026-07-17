@@ -1,8 +1,12 @@
-import { Component, signal, computed, HostListener, inject } from '@angular/core';
+import { Component, signal, computed, HostListener, inject, OnInit, OnDestroy } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { HttpClient } from '@angular/common/http';
+import { Subscription, interval } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
+import { environment } from '../../../../environments/environment';
 
 interface NavItem {
   label: string;
@@ -31,41 +35,19 @@ interface Notification {
   templateUrl: './layout.component.html',
   styleUrl: './layout.component.scss',
 })
-export class LayoutComponent {
+export class LayoutComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private router      = inject(Router);
+  private http        = inject(HttpClient);
+  private pollSub?: Subscription;
 
   collapsed          = signal(false);
   mobileOpen         = signal(false);
   userMenuOpen       = signal(false);
   notificationsOpen  = signal(false);
 
-  notifications = signal<Notification[]>([
-    {
-      id: '1',
-      icon: 'shopping_cart',
-      title: 'Pesanan Baru',
-      message: 'Order #12345 baru saja masuk dari WhatsApp',
-      time: '2 menit yang lalu',
-      read: false,
-    },
-    {
-      id: '2',
-      icon: 'inventory_2',
-      title: 'Stok Menipis',
-      message: 'Produk "Kopi Arabika" hampir habis (sisa 3 pcs)',
-      time: '1 jam yang lalu',
-      read: false,
-    },
-    {
-      id: '3',
-      icon: 'payments',
-      title: 'Pembayaran Diterima',
-      message: 'Pembayaran QRIS untuk order #12340 berhasil',
-      time: '3 jam yang lalu',
-      read: true,
-    },
-  ]);
+  notifications = signal<Notification[]>([]);
+  private lastPendingCount = 0;
 
   notificationCount = computed(() => this.notifications().filter(n => !n.read).length);
 
@@ -75,6 +57,64 @@ export class LayoutComponent {
   });
 
   business = computed(() => this.user()?.business ?? null);
+
+  ngOnInit(): void {
+    // Initial fetch immediately, then poll every 30s
+    const poll$ = this.http.get<any>(`${environment.apiUrl}/dashboard`);
+
+    // First call right away
+    poll$.subscribe({ next: (d) => this.processStats(d) });
+
+    // Then poll every 30 seconds
+    this.pollSub = interval(30_000).pipe(
+      switchMap(() => poll$)
+    ).subscribe({
+      next: (d) => this.processStats(d),
+    });
+  }
+
+  private processStats(d: any): void {
+    const pending = (d.stats?.orders_by_status?.pending ?? 0)
+                  + (d.stats?.orders_by_status?.paid    ?? 0);
+
+    if (this.lastPendingCount > 0 && pending > this.lastPendingCount) {
+      const diff = pending - this.lastPendingCount;
+      const newNotifs: Notification[] = [{
+        id:      Date.now().toString(),
+        icon:    'shopping_cart',
+        title:   'Pesanan Baru',
+        message: diff === 1 ? '1 order baru masuk dari WhatsApp' : `${diff} order baru masuk dari WhatsApp`,
+        time:    'Baru saja',
+        read:    false,
+      }];
+      this.notifications.update(n => [...newNotifs, ...n].slice(0, 20));
+    }
+
+    this.lastPendingCount = pending;
+
+    // Low stock notifications (added once, marked as read — informational only)
+    const lowStock: any[] = d.low_stock_products ?? [];
+    if (lowStock.length > 0) {
+      const existingIds = new Set(this.notifications().map(n => n.id));
+      const stockNotifs: Notification[] = lowStock
+        .filter((p: any) => !existingIds.has('stock_' + p.id))
+        .map((p: any) => ({
+          id:      'stock_' + p.id,
+          icon:    'inventory_2',
+          title:   'Stok Menipis',
+          message: `"${p.name}" tersisa ${p.stock} pcs`,
+          time:    '',
+          read:    true,
+        }));
+      if (stockNotifs.length > 0) {
+        this.notifications.update(n => [...n, ...stockNotifs].slice(0, 20));
+      }
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.pollSub?.unsubscribe();
+  }
 
   navGroups: NavGroup[] = [
     {

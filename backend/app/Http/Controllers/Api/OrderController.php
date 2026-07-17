@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\OrderResource;
 use App\Domain\Order\OrderService;
 use App\Jobs\SendWhatsAppNotification;
 use App\Models\Order;
@@ -36,7 +37,7 @@ class OrderController extends Controller
         $perPage = (int) $request->query('per_page', 20);
         $orders  = $this->orderService->getOrdersByBusiness($businessId, $filters, $perPage);
 
-        return response()->json($orders);
+        return response()->json($orders->through(fn ($o) => new OrderResource($o)));
     }
 
     public function show(Request $request, string $id): JsonResponse
@@ -53,9 +54,7 @@ class OrderController extends Controller
             return response()->json(['error' => 'Order not found'], 404);
         }
 
-        return response()->json([
-            'order' => $order,
-        ]);
+        return response()->json(['order' => new OrderResource($order)]);
     }
 
     public function updateStatus(Request $request, string $id): JsonResponse
@@ -65,17 +64,34 @@ class OrderController extends Controller
         ]);
 
         $businessId = $request->user()->business_id;
-        
+
         if (!$businessId) {
             return response()->json(['error' => 'No business associated with user'], 403);
         }
 
+        $order = $this->orderService->getOrderById($id, $businessId);
+
+        if (!$order) {
+            return response()->json(['error' => 'Order not found'], 404);
+        }
+
+        // Validate against OrderStatusService state machine
+        if (!\App\Domain\Order\OrderStatusService::canTransition($order->status, $request->status)) {
+            $allowed = implode(', ', \App\Domain\Order\OrderStatusService::getAvailableTransitions($order->status));
+            return response()->json([
+                'error'             => "Transisi status tidak valid: '{$order->status}' → '{$request->status}'.",
+                'current_status'    => $order->status,
+                'allowed_next'      => \App\Domain\Order\OrderStatusService::getAvailableTransitions($order->status),
+                'message'           => $allowed ? "Transisi yang diizinkan dari '{$order->status}': {$allowed}." : "Status '{$order->status}' sudah final.",
+            ], 422);
+        }
+
         try {
             $order = $this->orderService->updateOrderStatus($id, $request->status, $businessId);
-            
+
             return response()->json([
-                'order' => $order,
-                'message' => 'Order status updated successfully'
+                'order'   => $order,
+                'message' => 'Status pesanan berhasil diperbarui.',
             ]);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);

@@ -21,8 +21,23 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Clean slate (SQLite compatible)
-        DB::statement('PRAGMA foreign_keys = OFF;');
+        // ── Safety guards ─────────────────────────────────────────────────
+        // Refuse to run in production to avoid wiping live data
+        if (app()->environment('production')) {
+            $this->command->error('❌ DatabaseSeeder refused: cannot run in production environment.');
+            return;
+        }
+
+        // PRAGMA foreign_keys is SQLite-only. Skip on MySQL/PostgreSQL.
+        $isSqlite = config('database.default') === 'sqlite'
+            || str_contains(config('database.connections.' . config('database.default') . '.driver', ''), 'sqlite');
+
+        // ── Clean slate ───────────────────────────────────────────────────
+        if ($isSqlite) {
+            DB::statement('PRAGMA foreign_keys = OFF;');
+        } else {
+            DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        }
 
         Address::truncate();
         Payment::truncate();
@@ -35,7 +50,16 @@ class DatabaseSeeder extends Seeder
         Business::truncate();
         User::truncate();
 
-        DB::statement('PRAGMA foreign_keys = ON;');
+        if ($isSqlite) {
+            DB::statement('PRAGMA foreign_keys = ON;');
+        } else {
+            DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        }
+
+        // ── Seed credentials from env (fallback to demo values for local dev) ──
+        $ownerEmail    = env('SEED_OWNER_EMAIL',    'admin@wakasir.dev');
+        $ownerPassword = env('SEED_OWNER_PASSWORD', 'password');
+        $ownerName     = env('SEED_OWNER_NAME',     'Admin WaKasir');
 
         // ── 1. Business ───────────────────────────────────────────
         $business = Business::create([
@@ -60,9 +84,9 @@ class DatabaseSeeder extends Seeder
 
         // ── 2. Owner user ─────────────────────────────────────────
         $owner = User::create([
-            'name'        => 'Admin WaKasir',
-            'email'       => 'admin@wakasir.dev',
-            'password'    => Hash::make('password'),
+            'name'        => $ownerName,
+            'email'       => $ownerEmail,
+            'password'    => Hash::make($ownerPassword),
             'business_id' => $business->id,
             'role'        => 'owner',
         ]);
@@ -366,13 +390,15 @@ class DatabaseSeeder extends Seeder
         $this->command->info('✅ Seeder selesai!');
         $this->command->info('');
         $this->command->info('🔑 Login credentials:');
-        $this->command->info('   Email    : admin@wakasir.dev');
-        $this->command->info('   Password : password');
+        $this->command->info("   Email    : {$ownerEmail}");
+        $this->command->info("   Password : {$ownerPassword}");
         $this->command->info('');
         $this->command->info('📊 Data demo:');
         $this->command->info('   - 1 toko: Toko Batik Nusantara');
         $this->command->info('   - 6 produk (termasuk stok rendah & nonaktif)');
         $this->command->info('   - 5 pelanggan');
         $this->command->info('   - 9 pesanan (berbagai status)');
+        $this->command->info('');
+        $this->command->warn('⚠  Atur SEED_OWNER_EMAIL dan SEED_OWNER_PASSWORD di .env untuk credentials custom.');
     }
 }

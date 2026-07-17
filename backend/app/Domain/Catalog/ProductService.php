@@ -145,17 +145,4 @@ class ProductService
             ->where('business_id', $businessId)
             ->first();
     }
-
-    public function updateStock(string $productId, int $quantity, string $businessId): bool
-    {
-        $product = $this->getProductById($productId, $businessId);
-        
-        if (!$product) {
-            return false;
-        }
-
-        return $product->update([
-            'stock' => $product->stock - $quantity
-        ]);
-    }
 }

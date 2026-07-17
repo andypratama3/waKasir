@@ -20,12 +20,6 @@ class Customer extends Model
         return $this->belongsTo(Business::class);
     }
 
-    public function conversation(): HasMany
-    {
-        return $this->hasMany(Conversation::class);
-    }
-
-    /** Alias kept for code that calls $customer->conversations() */
     public function conversations(): HasMany
     {
         return $this->hasMany(Conversation::class);

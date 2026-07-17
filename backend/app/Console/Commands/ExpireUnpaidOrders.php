@@ -36,9 +36,10 @@ class ExpireUnpaidOrders extends Command
                 // 1. Update order status
                 $order->update(['status' => 'expired']);
 
-                // 2. Expire the payment record
-                if ($order->payment) {
-                    $order->payment->update(['status' => 'expired']);
+                // 2. Expire the payment record (hasOne → returns a single model or null)
+                $payment = $order->payment;
+                if ($payment) {
+                    $payment->update(['status' => 'expired']);
                 }
 
                 // 3. Update conversation state → EXPIRED

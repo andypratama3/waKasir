@@ -72,7 +72,7 @@ class ProcessMidtransWebhook implements ShouldQueue
                 dispatch(new SendWhatsAppNotification($customer->wa_number, $msg, $order->business_id));
 
                 // Update conversation state to PAID_AWAITING_ADDRESS
-                $customer->conversation()->latest()->first()?->update([
+                $customer->conversations()->latest()->first()?->update([
                     'current_state' => 'PAID_AWAITING_ADDRESS',
                 ]);
             }

@@ -142,19 +142,6 @@ class MidtransService
     }
 
     /**
-     * Force-expire a pending transaction.
-     */
-    public function expireTransaction(string $orderId): bool
-    {
-        $response = Http::withHeaders([
-            'Accept'        => 'application/json',
-            'Authorization' => 'Basic ' . base64_encode($this->serverKey . ':'),
-        ])->post("{$this->apiBaseUrl}/{$orderId}/expire");
-
-        return $response->successful();
-    }
-
-    /**
      * Verify Midtrans webhook notification signature.
      * Formula: SHA512(order_id + status_code + gross_amount + server_key)
      */

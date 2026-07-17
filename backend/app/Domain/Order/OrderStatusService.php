@@ -14,31 +14,17 @@ class OrderStatusService
         'refunded' => 'Refunded',
     ];
 
-    public static function getAllStatuses(): array
-    {
-        return self::STATUSES;
-    }
-
-    public static function isValidStatus(string $status): bool
-    {
-        return array_key_exists($status, self::STATUSES);
-    }
-
-    public static function getStatusLabel(string $status): string
-    {
-        return self::STATUSES[$status] ?? 'Unknown';
-    }
-
     public static function canTransition(string $from, string $to): bool
     {
         $transitions = [
-            'pending' => ['paid', 'cancelled'],
-            'paid' => ['processing', 'cancelled', 'refunded'],
+            'pending'    => ['paid', 'cancelled'],
+            'paid'       => ['processing', 'cancelled', 'refunded'],
             'processing' => ['shipped', 'cancelled'],
-            'shipped' => ['completed', 'refunded'],
-            'completed' => ['refunded'],
-            'cancelled' => [],
-            'refunded' => [],
+            'shipped'    => ['completed', 'refunded'],
+            'completed'  => ['refunded'],
+            'expired'    => ['pending', 'cancelled'],   // expired QR can be retried
+            'cancelled'  => [],
+            'refunded'   => [],
         ];
 
         return in_array($to, $transitions[$from] ?? []);
@@ -47,13 +33,14 @@ class OrderStatusService
     public static function getAvailableTransitions(string $currentStatus): array
     {
         $transitions = [
-            'pending' => ['paid', 'cancelled'],
-            'paid' => ['processing', 'cancelled', 'refunded'],
+            'pending'    => ['paid', 'cancelled'],
+            'paid'       => ['processing', 'cancelled', 'refunded'],
             'processing' => ['shipped', 'cancelled'],
-            'shipped' => ['completed', 'refunded'],
-            'completed' => ['refunded'],
-            'cancelled' => [],
-            'refunded' => [],
+            'shipped'    => ['completed', 'refunded'],
+            'completed'  => ['refunded'],
+            'expired'    => ['pending', 'cancelled'],
+            'cancelled'  => [],
+            'refunded'   => [],
         ];
 
         return $transitions[$currentStatus] ?? [];

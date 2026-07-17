@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject, tap } from 'rxjs';
+import { Observable, BehaviorSubject, tap, finalize } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 interface AuthResponse {
@@ -64,15 +64,16 @@ export class AuthService {
 
   logout(): Observable<any> {
     return this.http.post(`${this.apiUrl}/logout`, {}).pipe(
-      tap(() => {
+      finalize(() => {
         this.clearAuthData();
       })
     );
   }
 
   me(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/me`).pipe(
-      tap(user => {
+    return this.http.get<{ user: any }>(`${this.apiUrl}/me`).pipe(
+      tap(response => {
+        const user = response?.user ?? response;
         this.userSubject.next(user);
         localStorage.setItem('user', JSON.stringify(user));
       })

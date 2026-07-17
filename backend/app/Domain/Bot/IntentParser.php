@@ -6,9 +6,7 @@ class IntentParser
 {
     /**
      * Map a raw message to a high-level intent.
-     * Returns one of: view_catalog | ask_product | check_order | checkout |
-     *                 add_to_cart  | cancel      | help        | reset     |
-     *                 unknown
+     * Returns one of: view_catalog | check_order | reset | unknown
      */
     public static function parse(string $message): string
     {
@@ -20,12 +18,8 @@ class IntentParser
         }
 
         $patterns = [
-            'view_catalog'  => ['/katalog/', '/lihat\s*produk/', '/produk/', '/menu/', '/belanja/', '/beli/'],
-            'ask_product'   => ['/tanya/', '/info\s*(produk)?/', '/cari/', '/\?$/'],
+            'view_catalog'  => ['/katalog/', '/lihat\s*produk/', '/produk/', '/belanja/', '/beli/'],
             'check_order'   => ['/status\s*(order|pesanan)?/', '/pesanan\s*saya/', '/cek\s*order/', '/order\s*#/'],
-            'checkout'      => ['/checkout/', '/lanjut\s*(bayar|pesan)?/', '/selesai\s*belanja/'],
-            'cancel'        => ['/batal/', '/cancel/', '/tidak\s*jadi/'],
-            'help'          => ['/bantuan/', '/help/', '/tolong/', '/admin/'],
         ];
 
         foreach ($patterns as $intent => $regexes) {
@@ -64,9 +58,26 @@ class IntentParser
     {
         $msg = mb_strtolower(trim($message));
 
-        // Written numbers (Indonesian)
+        // Compound written numbers (must check before single words)
+        $compounds = [
+            'sepuluh' => 10, 'sebelas' => 11, 'dua belas' => 12, 'tiga belas' => 13,
+            'empat belas' => 14, 'lima belas' => 15, 'enam belas' => 16,
+            'tujuh belas' => 17, 'delapan belas' => 18, 'sembilan belas' => 19,
+            'dua puluh' => 20, 'tiga puluh' => 30, 'empat puluh' => 40, 'lima puluh' => 50,
+            'enam puluh' => 60, 'tujuh puluh' => 70, 'delapan puluh' => 80, 'sembilan puluh' => 90,
+            'seratus' => 100, 'dua ratus' => 200, 'tiga ratus' => 300, 'empat ratus' => 400,
+            'lima ratus' => 500, 'enam ratus' => 600, 'tujuh ratus' => 700, 'delapan ratus' => 800,
+            'sembilan ratus' => 900, 'seribu' => 1000,
+        ];
+        foreach ($compounds as $word => $num) {
+            if (str_contains($msg, $word)) {
+                return $num;
+            }
+        }
+
+        // Single written numbers
         $written = ['satu' => 1, 'dua' => 2, 'tiga' => 3, 'empat' => 4, 'lima' => 5,
-                    'enam' => 6, 'tujuh' => 7, 'delapan' => 8, 'sembilan' => 9, 'sepuluh' => 10];
+                    'enam' => 6, 'tujuh' => 7, 'delapan' => 8, 'sembilan' => 9];
         foreach ($written as $word => $num) {
             if (str_contains($msg, $word)) {
                 return $num;

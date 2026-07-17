@@ -878,3 +878,40 @@ body {
   font-size: 56px !important;
   color: #d1d5db;
 }
+
+// ── Missing component classes ───────────────────────────────────
+.table-stats {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px; font-size: 0.8125rem; color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.detail-left {
+  flex: 1; min-width: 0;
+}
+
+.detail-right {
+  width: 320px; flex-shrink: 0;
+  @media (max-width: 768px) { width: 100%; }
+}
+
+.stat-body {
+  display: flex; flex-direction: column; gap: 2px;
+}
+
+.tab-content {
+  padding: 24px;
+}
+
+.topbar-icon-btn {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px;
+  border-radius: var(--radius-md);
+  border: none; background: transparent;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  transition: background var(--transition-fast);
+  &:hover { background: var(--color-bg); }
+  .material-symbols-outlined { font-size: 22px; }
+}

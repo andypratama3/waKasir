@@ -51,14 +51,14 @@ class AuthController extends Controller
 
         if (Auth::attempt($request->only('email', 'password'))) {
             $user = Auth::user();
-            
+
             // Revoke previous tokens
             $user->tokens()->delete();
-            
+
             $token = $user->createToken('api-token')->plainTextToken;
 
             return response()->json([
-                'user' => $user->load('business'),
+                'user'  => $user->load('business.subscription'),
                 'token' => $token,
             ]);
         }

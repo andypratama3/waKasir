@@ -218,3 +218,156 @@ label {
 .icon-wa         { color: #25D366; }
 .icon-midtrans   { color: #0099cc; }
 .icon-rajaongkir { color: #e67e22; }
+
+// ── WhatsApp Tab ─────────────────────────────────────────────────────────────
+
+.badge-connected {
+  color: #10b981;
+  font-size: 10px;
+  margin-left: auto;
+  margin-right: 4px;
+}
+
+// Connected card
+.wa-connected-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+}
+.wa-connected-icon .material-symbols-outlined {
+  font-size: 2.5rem;
+  color: #16a34a;
+}
+.wa-connected-info { flex: 1; }
+.wa-connected-name   { font-weight: 700; font-size: 1rem; color: #14532d; }
+.wa-connected-number { font-size: 0.9375rem; color: #166534; margin-top: 2px; }
+.wa-connected-meta   { font-size: 0.75rem; color: #6b7280; margin-top: 4px; }
+
+.quality-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  .material-symbols-outlined { font-size: 14px; }
+  &.quality-green  { background: #dcfce7; color: #16a34a; }
+  &.quality-yellow { background: #fef9c3; color: #a16207; }
+  &.quality-red    { background: #fee2e2; color: #dc2626; }
+}
+
+.token-expiry-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8125rem;
+  color: #6b7280;
+  margin-bottom: 1.25rem;
+  .material-symbols-outlined { font-size: 16px; }
+  &.token-warn { color: #d97706; }
+}
+
+.wa-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+// Not connected state
+.wa-not-connected {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 1.5rem 0;
+
+  .wa-not-connected-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #f3f4f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+    .material-symbols-outlined { font-size: 2rem; color: #9ca3af; }
+  }
+
+  h4 { font-size: 1.125rem; font-weight: 700; margin: 0 0 0.5rem; }
+
+  p {
+    font-size: 0.9375rem;
+    color: #6b7280;
+    max-width: 420px;
+    margin: 0 0 1.5rem;
+    line-height: 1.6;
+  }
+}
+
+.embedded-signup-steps {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  justify-content: center;
+
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.875rem;
+    color: #374151;
+  }
+
+  .step-num {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+}
+
+.btn-wa-connect {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 32px;
+  border-radius: 9999px;
+  background: #25D366;  // WhatsApp green
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  margin-bottom: 1rem;
+
+  &:hover:not(:disabled) { background: #1ebe5c; transform: translateY(-1px); }
+  &:disabled { opacity: 0.65; cursor: not-allowed; }
+
+  .material-symbols-outlined { font-size: 1.25rem; }
+}
+
+.wa-privacy-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  .material-symbols-outlined { font-size: 14px; }
+}
+
+.wa-status-skeleton { padding: 0.5rem 0; }

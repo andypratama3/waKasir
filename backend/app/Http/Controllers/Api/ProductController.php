@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\ProductResource;
 use App\Domain\Catalog\ProductService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -27,15 +28,12 @@ class ProductController extends Controller
         $perPage  = (int) $request->query('per_page', 0);
         $products = $this->productService->getActiveProducts($businessId, $perPage);
 
-        $data = $perPage > 0 ? $products : ['products' => $products->load('media')];
-
         if ($perPage > 0) {
-            // $products is a paginator — transform items
-            return response()->json($products->through(fn ($p) => $p->load('media')));
+            return response()->json($products->through(fn ($p) => new ProductResource($p->load('media', 'variants'))));
         }
 
         return response()->json([
-            'products' => $products->load('media'),
+            'products' => ProductResource::collection($products->load('media')),
         ]);
     }
 
@@ -157,21 +155,6 @@ class ProductController extends Controller
         }
 
         $products = $this->productService->searchProducts($request->query, $businessId);
-
-        return response()->json([
-            'products' => $products->load('media'),
-        ]);
-    }
-
-    public function byCategory(Request $request, string $category): JsonResponse
-    {
-        $businessId = $request->user()->business_id;
-        
-        if (!$businessId) {
-            return response()->json(['error' => 'No business associated with user'], 403);
-        }
-
-        $products = $this->productService->getProductsByCategory($category, $businessId);
 
         return response()->json([
             'products' => $products->load('media'),

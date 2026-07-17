@@ -48,9 +48,6 @@ class CustomerController extends Controller
         return response()->json($customers);
     }
 
-    /**
-     * Single customer detail with order history.
-     */
     public function show(Request $request, string $id): JsonResponse
     {
         $businessId = $request->user()->business_id;
@@ -72,13 +69,33 @@ class CustomerController extends Controller
             return response()->json(['error' => 'Customer not found'], 404);
         }
 
-        $totalSpent  = $customer->orders->where('status', 'completed')->sum('total_amount');
+        $totalSpent  = $customer->orders->whereIn('status', ['paid', 'completed'])->sum('total_amount');
         $totalOrders = $customer->orders->count();
 
         return response()->json([
-            'customer'     => $customer,
-            'total_orders' => $totalOrders,
-            'total_spent'  => (float) $totalSpent,
+            'customer'     => [
+                'id'           => $customer->id,
+                'wa_number'    => $customer->wa_number,
+                'name'         => $customer->name,
+                'email'        => $customer->email,
+                'created_at'   => $customer->created_at,
+                'total_orders' => $totalOrders,
+                'total_spent'  => (float) $totalSpent,
+                'orders'       => $customer->orders->map(fn ($o) => [
+                    'id'           => $o->id,
+                    'order_number' => $o->order_number,
+                    'total_amount' => (float) $o->total_amount,
+                    'status'       => $o->status,
+                    'courier_name' => $o->courier_name,
+                    'tracking_number' => $o->tracking_number,
+                    'created_at'   => $o->created_at,
+                    'items'        => $o->items->map(fn ($i) => [
+                        'product_name' => $i->product?->name ?? $i->variant_name ?? 'Produk',
+                        'qty'          => $i->qty,
+                        'price'        => (float) $i->price_at_order,
+                    ]),
+                ]),
+            ],
         ]);
     }
 }
