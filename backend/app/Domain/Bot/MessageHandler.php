@@ -44,6 +44,14 @@ class MessageHandler
         $customer     = $this->getOrCreateCustomer($waNumber, $businessId);
         $conversation = $this->getOrCreateConversation($customer->id);
 
+        // ── Resolve per-business ShippingService ──────────────────────────
+        $rajaongkirKey = $business->getRajaOngkirApiKeyDecrypted();
+        if ($rajaongkirKey) {
+            $this->shippingService = new \App\Domain\Shipping\ShippingService(
+                new \App\Domain\Shipping\RajaOngkirService($rajaongkirKey)
+            );
+        }
+
         // ── Operating-hours gate ─────────────────────────────────────────
         $outsideHours = $this->isOutsideOperatingHours($business);
 
@@ -311,6 +319,22 @@ class MessageHandler
         if (empty($cart['items'])) {
             $conversation->update(['current_state' => StateMachine::STATES['BROWSING']]);
             return ['text' => 'Keranjang kosong. Silakan pilih produk terlebih dahulu.', 'state' => StateMachine::STATES['BROWSING']];
+        }
+
+        $intent = IntentParser::parse($message);
+
+        // Allow navigation intents to break out of cart review
+        if ($intent === 'view_catalog') {
+            $conversation->update(['current_state' => StateMachine::STATES['BROWSING']]);
+            return $this->handleBrowsing($message, $intent, $conversation, $conversation->customer->business);
+        }
+
+        if ($intent === 'check_order') {
+            $conversation->update(['current_state' => StateMachine::STATES['CHECKING_ORDER']]);
+            return [
+                'text'  => "Silakan kirim *nomor order* Anda (format: ORD-YYYYMMDD-XXXX):",
+                'state' => StateMachine::STATES['CHECKING_ORDER'],
+            ];
         }
 
         if (IntentParser::isYes($message)) {

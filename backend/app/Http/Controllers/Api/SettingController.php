@@ -123,4 +123,28 @@ class SettingController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+
+    public function categories(Request $request): JsonResponse
+    {
+        $businessId = $request->user()->business_id;
+
+        if (!$businessId) {
+            return response()->json(['error' => 'No business associated with user'], 403);
+        }
+
+        $categories = $this->categoryService->getCategories($businessId);
+
+        return response()->json(['categories' => $categories]);
+    }
+
+    public function plans(): JsonResponse
+    {
+        $plans = [
+            $this->subscriptionService->getPlanDetails('starter'),
+            $this->subscriptionService->getPlanDetails('growth'),
+            $this->subscriptionService->getPlanDetails('pro'),
+        ];
+
+        return response()->json(['plans' => $plans]);
+    }
 }

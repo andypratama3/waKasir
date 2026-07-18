@@ -115,6 +115,7 @@ class OrderService
         }
 
         $timestamps = [];
+        if ($status === 'paid')      $timestamps['paid_at']     = now();
         if ($status === 'shipped')    $timestamps['shipped_at']   = now();
         if ($status === 'completed')  $timestamps['completed_at'] = now();
 

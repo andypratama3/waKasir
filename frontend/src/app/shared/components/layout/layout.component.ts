@@ -53,7 +53,13 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   user = computed(() => {
     const raw = localStorage.getItem('user');
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      localStorage.removeItem('user');
+      return null;
+    }
   });
 
   business = computed(() => this.user()?.business ?? null);
@@ -133,6 +139,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
         { label: 'Pengaturan Bot',  icon: 'smart_toy',         route: '/bot-settings' },
         { label: 'Pengaturan Toko', icon: 'store',             route: '/store-settings' },
         { label: 'Langganan',       icon: 'workspace_premium', route: '/subscription' },
+        { label: 'Tim',             icon: 'group',             route: '/team' },
       ],
     },
   ];

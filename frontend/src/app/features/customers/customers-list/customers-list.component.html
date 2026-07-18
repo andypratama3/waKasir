@@ -53,7 +53,7 @@
           class="search-input"
           placeholder="Cari nama atau nomor WA..."
           [value]="search()"
-          (input)="search.set($any($event.target).value)"
+          (input)="onSearch($any($event.target).value)"
         />
       </div>
     </div>

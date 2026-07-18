@@ -14,5 +14,6 @@ class ShippingCache extends Model
         'city_type',
         'subdistrict_id',
         'subdistrict_name',
+        'postal_code',
     ];
 }

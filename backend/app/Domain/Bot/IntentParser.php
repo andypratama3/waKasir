@@ -134,7 +134,7 @@ class IntentParser
 
         // Try partial name match (case-insensitive)
         foreach ($productNames as $index => $name) {
-            if (str_contains(mb_strtolower($name), $msg) || str_contains($msg, mb_strtolower($name))) {
+            if ($msg !== '' && (str_contains(mb_strtolower($name), $msg) || str_contains($msg, mb_strtolower($name)))) {
                 return $index;
             }
         }

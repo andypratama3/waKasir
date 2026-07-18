@@ -113,12 +113,6 @@ class OrderController extends Controller
         try {
             $order = $this->orderService->updateTrackingNumber($id, $request->tracking_number, $businessId);
 
-            // Auto-advance status to 'shipped' when resi is added
-            if ($order->status === 'processing' || $order->status === 'paid') {
-                $order->update(['status' => 'shipped']);
-                $order->refresh();
-            }
-
             // Notify customer via WhatsApp
             $customer = $order->customer;
             if ($customer?->wa_number) {

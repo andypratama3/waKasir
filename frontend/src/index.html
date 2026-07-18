@@ -23,11 +23,12 @@
     Facebook JS SDK — dibutuhkan untuk Embedded Signup (Hubungkan WhatsApp).
     SDK ini dimuat async, tidak memblokir render halaman.
     Dokumentasi: https://developers.facebook.com/docs/javascript/quickstart
+    APP ID diambil dari environment.ts via Angular build.
   -->
   <script>
     window.fbAsyncInit = function() {
       FB.init({
-        appId   : '%%META_APP_ID%%',  // diganti saat build via angular.json fileReplacements
+        appId   : '123456789012345',  // Ganti dengan Meta App ID Anda dari developers.facebook.com
         cookie  : true,
         xfbml   : true,
         version : 'v18.0'

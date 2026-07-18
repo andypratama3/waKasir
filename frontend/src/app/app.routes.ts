@@ -73,9 +73,22 @@ export const routes: Routes = [
           import('./features/reports/reports.component').then(m => m.ReportsComponent),
         title: 'Laporan — WaKasir',
       },
+      {
+        path: 'team',
+        loadComponent: () =>
+          import('./features/team/team.component').then(m => m.TeamComponent),
+        title: 'Tim — WaKasir',
+      },
     ],
   },
 
+  // 404
+  {
+    path: '404',
+    loadComponent: () =>
+      import('./features/not-found/not-found.component').then(m => m.NotFoundComponent),
+  },
+
   // Fallback
-  { path: '**', redirectTo: 'dashboard' },
+  { path: '**', redirectTo: '404' },
 ];

@@ -13,7 +13,6 @@ class ProductService
     {
         $query = Product::where('business_id', $businessId)
             ->where('is_active', true)
-            ->where('stock', '>', 0)
             ->orderBy('name');
 
         return $perPage > 0 ? $query->paginate($perPage) : $query->get();

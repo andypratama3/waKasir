@@ -187,4 +187,17 @@ class BusinessController extends Controller
 
         return response()->json(['message' => 'WhatsApp berhasil diputus.']);
     }
+
+    public function stats(Request $request): JsonResponse
+    {
+        $businessId = $request->user()->business_id;
+
+        if (!$businessId) {
+            return response()->json(['error' => 'No business associated with user'], 403);
+        }
+
+        $stats = $this->businessService->getBusinessStats($businessId);
+
+        return response()->json(['stats' => $stats]);
+    }
 }

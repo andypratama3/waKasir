@@ -42,7 +42,11 @@ export class AuthService {
     }
     
     if (user) {
-      this.userSubject.next(JSON.parse(user));
+      try {
+        this.userSubject.next(JSON.parse(user));
+      } catch {
+        localStorage.removeItem('user');
+      }
     }
   }
 

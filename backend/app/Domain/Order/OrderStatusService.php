@@ -11,6 +11,7 @@ class OrderStatusService
         'shipped' => 'Shipped',
         'completed' => 'Completed',
         'cancelled' => 'Cancelled',
+        'expired' => 'Expired',
         'refunded' => 'Refunded',
     ];
 

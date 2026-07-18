@@ -64,7 +64,7 @@ class SendWhatsAppNotification implements ShouldQueue
             if (!str_starts_with($phoneNumber, '62')) {
                 if (str_starts_with($phoneNumber, '0')) {
                     $phoneNumber = '62' . substr($phoneNumber, 1);
-                } elseif (!str_starts_with($phoneNumber, '62')) {
+                } else {
                     $phoneNumber = '62' . $phoneNumber;
                 }
             }

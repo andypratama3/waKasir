@@ -33,7 +33,7 @@ class ProductController extends Controller
         }
 
         return response()->json([
-            'products' => ProductResource::collection($products->load('media')),
+            'products' => ProductResource::collection($products->load('media', 'variants')),
         ]);
     }
 
@@ -86,7 +86,7 @@ class ProductController extends Controller
         }
 
         return response()->json([
-            'product' => $product->load('media'),
+            'product' => $product->load('media', 'variants'),
         ]);
     }
 
@@ -157,7 +157,22 @@ class ProductController extends Controller
         $products = $this->productService->searchProducts($request->query, $businessId);
 
         return response()->json([
-            'products' => $products->load('media'),
+            'products' => $products->load('media', 'variants'),
+        ]);
+    }
+
+    public function byCategory(Request $request, string $cat): JsonResponse
+    {
+        $businessId = $request->user()->business_id;
+
+        if (!$businessId) {
+            return response()->json(['error' => 'No business associated with user'], 403);
+        }
+
+        $products = $this->productService->getProductsByCategory($cat, $businessId);
+
+        return response()->json([
+            'products' => ProductResource::collection($products->load('media', 'variants')),
         ]);
     }
 }

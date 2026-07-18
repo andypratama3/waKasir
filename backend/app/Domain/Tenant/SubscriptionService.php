@@ -13,6 +13,21 @@ class SubscriptionService
         $business = Business::findOrFail($businessId);
         $subscription = $business->subscription;
 
+        if (!$subscription) {
+            $subscription = Subscription::create([
+                'business_id' => $businessId,
+                'plan' => $newPlan,
+                'quota_conversation' => $this->getPlanQuota($newPlan),
+                'quota_used' => 0,
+                'max_products' => $this->getPlanMaxProducts($newPlan),
+                'renewed_at' => now(),
+                'ends_at' => now()->addMonth(),
+                'status' => 'active',
+            ]);
+
+            return $subscription->fresh();
+        }
+
         $subscription->update([
             'plan' => $newPlan,
             'quota_conversation' => $this->getPlanQuota($newPlan),

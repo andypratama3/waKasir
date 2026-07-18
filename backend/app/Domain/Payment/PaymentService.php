@@ -109,7 +109,8 @@ class PaymentService
         $midtrans = ($business && $business->getMidtransServerKeyDecrypted())
             ? new MidtransService(
                 serverKey: $business->getMidtransServerKeyDecrypted(),
-                clientKey: $business->getMidtransClientKeyDecrypted() ?? ''
+                clientKey: $business->getMidtransClientKeyDecrypted() ?? '',
+                isProduction: config('services.midtrans.is_production', false),
               )
             : $this->midtransService;
 

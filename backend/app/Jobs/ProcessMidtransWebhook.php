@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Domain\Payment\PaymentService;
+use App\Domain\Bot\StateMachine;
 use App\Models\Order;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -73,7 +74,7 @@ class ProcessMidtransWebhook implements ShouldQueue
 
                 // Update conversation state to PAID_AWAITING_ADDRESS
                 $customer->conversations()->latest()->first()?->update([
-                    'current_state' => 'PAID_AWAITING_ADDRESS',
+                    'current_state' => StateMachine::STATES['PAID_AWAITING_ADDRESS'],
                 ]);
             }
 
