@@ -109,7 +109,14 @@ export class SubscriptionComponent implements OnInit {
         this.subscription.set(data.subscription ?? data);
         this.loading.set(false);
       },
-      error: () => this.loading.set(false),
+      error: (err) => {
+        this.loading.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Gagal memuat data',
+          detail: 'Terjadi kesalahan saat memuat informasi langganan. Silakan refresh halaman.'
+        });
+      },
     });
   }
 
