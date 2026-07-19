@@ -85,7 +85,7 @@ class WhatsAppService
 
         // Step 4: Buat System User & assign ke WABA untuk dapat token tidak-expire
         // (Dalam produksi ini dilakukan via System User di Meta Business Manager;
-        //  untuk MVP, simpan user token dan set expires_at 60 hari)
+        //  untuk MVP, simpan user token dan set expires_at 55 hari)
         $expiresAt = now()->addDays(55); // renew sebelum expire
 
         // Step 5: Ambil phone numbers dari WABA ini

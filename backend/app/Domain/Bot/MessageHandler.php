@@ -194,6 +194,24 @@ class MessageHandler
                 ];
             }
 
+            // Additional stock validation for multi-item cart scenarios
+            $cart = $conversation->cart_data ?? [];
+            $existingQty = 0;
+            if (!empty($cart['items'])) {
+                foreach ($cart['items'] as $item) {
+                    if ($item['product_id'] == $product->id) {
+                        $existingQty += $item['qty'];
+                    }
+                }
+            }
+            
+            if ($existingQty >= $product->stock) {
+                return [
+                    'text'  => "Maaf, *{$product->name}* sudah mencapai batas stok di keranjang.\n\nPilih produk lain:\n\n{$productList}",
+                    'state' => StateMachine::STATES['BROWSING'],
+                ];
+            }
+
             // Has variants? Load explicitly to avoid ternary ambiguity
             if (!$product->relationLoaded('variants')) {
                 $product->load('variants');
@@ -283,7 +301,20 @@ class MessageHandler
             ];
         }
 
-        $cart      = $conversation->cart_data ?? [];
+        $cart = $conversation->cart_data ?? [];
+        $productId = $cart['product_id'] ?? null;
+        
+        // Validate stock availability
+        if ($productId) {
+            $product = \App\Models\Product::find($productId);
+            if ($product && $qty > $product->stock) {
+                return [
+                    'text'  => "Maaf, stok *{$product->name}* tidak mencukupi. Tersedia: {$product->stock} pcs. Mohon kurangi jumlah.",
+                    'state' => StateMachine::STATES['SELECTING_QTY'],
+                ];
+            }
+        }
+
         $unitPrice = (float) ($cart['unit_price'] ?? 0);
         $subtotal  = $unitPrice * $qty;
 
@@ -786,7 +817,7 @@ class MessageHandler
     {
         return Customer::firstOrCreate(
             ['wa_number' => $waNumber, 'business_id' => $businessId],
-            ['business_id' => $businessId]
+            ['name' => null, 'email' => null]
         );
     }
 
@@ -836,7 +867,8 @@ class MessageHandler
 
         // Handle overnight hours (e.g., 21:00–02:00)
         if ($start->greaterThan($end)) {
-            return $now->between($end, $start);
+            // Outside hours when NOT between end and start (overnight period)
+            return !$now->between($end, $start);
         }
 
         return !$now->between($start, $end);

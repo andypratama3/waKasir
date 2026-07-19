@@ -90,13 +90,22 @@ class SendWhatsAppNotification implements ShouldQueue
                 $imgResponse = Http::withHeaders($headers)->post($endpoint, $imagePayload);
 
                 if (!$imgResponse->successful()) {
-                    Log::error('SendWhatsAppNotification: Failed to send image', [
+                    Log::error('SendWhatsAppNotification: Failed to send image, falling back to text', [
+                        'status'      => $imgResponse->status(),
                         'response'    => $imgResponse->body(),
                         'business_id' => $this->businessId,
                         'image_url'   => $this->imageUrl,
                     ]);
                     // Fall back to sending text only
-                    $this->sendTextMessage($endpoint, $headers, $phoneNumber);
+                    try {
+                        $this->sendTextMessage($endpoint, $headers, $phoneNumber);
+                    } catch (\Exception $e) {
+                        Log::error('SendWhatsAppNotification: Text fallback also failed', [
+                            'error'       => $e->getMessage(),
+                            'business_id' => $this->businessId,
+                        ]);
+                        throw $e;
+                    }
                 }
 
                 return; // Image sent with caption — done
